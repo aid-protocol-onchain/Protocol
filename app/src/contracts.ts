@@ -37,6 +37,25 @@ export function campaignChainIds(campaignId: string): number[] {
   return Object.keys(CAMPAIGN_ESCROWS[campaignId] ?? {}).map(Number);
 }
 
+// ---- Solana (devnet) ----
+export const SOLANA_PROGRAM_ID = "AVayPFmfGivPALcE93L8gfULQwQ6GPoVGGpEu9VSRSVT";
+export const SOLANA_RPC = "https://api.devnet.solana.com";
+export const SOLANA_EXPLORER_TX = "https://explorer.solana.com/tx/"; // append ?cluster=devnet
+
+export interface SolanaCampaign {
+  id: number; // u64 campaign id used in the PDA seed
+  campaignPda: string;
+}
+
+// Per-campaign Solana deployment, keyed by the D1 campaign id.
+export const SOLANA_CAMPAIGNS: Record<string, SolanaCampaign> = {
+  "ve-quake-2026": { id: 1, campaignPda: "6bdycQjj3TH9dHmebHwumaUUfhBwRzCYKSuUvZruzv5j" },
+};
+
+export function solanaCampaign(campaignId: string): SolanaCampaign | undefined {
+  return SOLANA_CAMPAIGNS[campaignId];
+}
+
 // Minimal ABI for the donor-facing escrow entry points.
 export const ESCROW_ABI = [
   {

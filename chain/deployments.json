@@ -25,7 +25,8 @@
   "campaigns": {
     "ve-quake-2026": {
       "baseSepolia": "0x27BdE55Cffdd3493E1437cfB9b8986D7C953c822",
-      "sepolia": "0x27BdE55Cffdd3493E1437cfB9b8986D7C953c822"
+      "sepolia": "0x27BdE55Cffdd3493E1437cfB9b8986D7C953c822",
+      "solanaDevnet": { "id": 1, "campaignPda": "6bdycQjj3TH9dHmebHwumaUUfhBwRzCYKSuUvZruzv5j" }
     }
   }
 }

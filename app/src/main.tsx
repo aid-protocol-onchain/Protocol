@@ -1,3 +1,7 @@
+import { Buffer } from "buffer";
+if (!(globalThis as unknown as { Buffer?: unknown }).Buffer) {
+  (globalThis as unknown as { Buffer: unknown }).Buffer = Buffer;
+}
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -15,6 +19,7 @@ import { Layout } from "./components/Layout";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { wagmiConfig } from "./wallet/wagmi";
+import { SolanaProvider } from "./wallet/solana";
 import "./styles.css";
 
 const queryClient = new QueryClient();
@@ -23,7 +28,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
+        <SolanaProvider>
+          <BrowserRouter>
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<Feed />} />
@@ -38,8 +44,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <Route path="/privacy" element={<Legal title="Privacy Policy" content={PRIVACY} />} />
               <Route path="/terms" element={<Legal title="Terms of Service" content={TERMS} />} />
             </Route>
-          </Routes>
-        </BrowserRouter>
+            </Routes>
+          </BrowserRouter>
+        </SolanaProvider>
       </QueryClientProvider>
     </WagmiProvider>
   </React.StrictMode>
