@@ -11,7 +11,9 @@ const HTML = `<!doctype html>
 <meta name="description" content="Aid Protocol is a non-profit, open-source platform for disaster relief. Donations are recorded on-chain and released against verified proof of spend. Launching soon." />
 <meta property="og:title" content="Aid Protocol" />
 <meta property="og:description" content="A non-profit lifeline for disaster relief. On-chain donations, released against proof. Launching soon." />
-<meta property="og:image" content="https://aidprotocol.org/hero.jpg" />
+<meta property="og:image" content="https://aidprotocol.org/og.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:site" content="@aidprotocol_" />
 <meta property="og:type" content="website" />
 <meta name="theme-color" content="#050b14" />
 <style>
@@ -28,9 +30,9 @@ const HTML = `<!doctype html>
     background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;
   }
   .bg{position:fixed;inset:0;z-index:0;overflow:hidden}
-  .bg img{width:100%;height:100%;object-fit:cover;object-position:center 30%;
+  .bg img{width:100%;height:100%;object-fit:cover;object-position:center 38%;
     animation:kenburns 28s ease-in-out infinite alternate;opacity:0;transition:opacity 1.2s ease}
-  .bg img.on{opacity:.85}
+  .bg img.on{opacity:.9}
   .bg::after{content:"";position:absolute;inset:0;
     background:linear-gradient(180deg, rgba(5,11,20,.55) 0%, rgba(5,11,20,.35) 35%, rgba(5,11,20,.82) 80%, #050b14 100%)}
   @keyframes kenburns{from{transform:scale(1) translateY(0)}to{transform:scale(1.12) translateY(-2%)}}
@@ -82,7 +84,7 @@ const HTML = `<!doctype html>
 </style>
 </head>
 <body>
-  <div class="bg"><img id="hero" src="/hero.jpg" alt="" onload="this.classList.add('on')" /></div>
+  <div class="bg"><img id="hero" src="/hero-2.jpg" alt="" onload="this.classList.add('on')" /></div>
 
   <div class="wrap">
     <header>
@@ -116,9 +118,13 @@ const HTML = `<!doctype html>
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
             Follow on X
           </a>
+          <a class="btn btn-ghost" href="https://github.com/aid-protocol-onchain/Protocol" target="_blank" rel="noreferrer">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.6 18 4.9 18 4.9c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+            View on GitHub
+          </a>
           <a class="btn btn-ghost" href="mailto:admin@aidprotocol.org">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
-            admin@aidprotocol.org
+            Email
           </a>
         </div>
       </section>
@@ -132,6 +138,10 @@ const HTML = `<!doctype html>
         <a href="https://x.com/aidprotocol_" target="_blank" rel="noreferrer">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
           @aidprotocol_
+        </a>
+        <a href="https://github.com/aid-protocol-onchain/Protocol" target="_blank" rel="noreferrer">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.6 18 4.9 18 4.9c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+          GitHub
         </a>
         <a href="mailto:admin@aidprotocol.org">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>

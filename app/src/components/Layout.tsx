@@ -77,6 +77,7 @@ export function Layout() {
             </div>
             <div className="footer-links">
               <a href="https://x.com/aidprotocol_" target="_blank" rel="noreferrer"><i className="ti ti-brand-x" aria-hidden="true" /> @aidprotocol_</a>
+              <a href="https://github.com/aid-protocol-onchain/Protocol" target="_blank" rel="noreferrer"><i className="ti ti-brand-github" aria-hidden="true" /> GitHub</a>
               <a href="mailto:admin@aidprotocol.org"><i className="ti ti-mail" aria-hidden="true" /> admin@aidprotocol.org</a>
               <Link to="/privacy">Privacy</Link>
               <Link to="/terms">Terms</Link>
