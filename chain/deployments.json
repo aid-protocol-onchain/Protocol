@@ -28,5 +28,20 @@
       "sepolia": "0x27BdE55Cffdd3493E1437cfB9b8986D7C953c822",
       "solanaDevnet": { "id": 1, "campaignPda": "6bdycQjj3TH9dHmebHwumaUUfhBwRzCYKSuUvZruzv5j" }
     }
+  },
+  "tokens": {
+    "note": "Mintable test stablecoins (6 decimals, open faucet mint). Testnet only.",
+    "baseSepolia": {
+      "USDC": "0xbEE095934e857c8661E7906E5178b794AE512E6b",
+      "USDT": "0x93f85a3C7DD94B4815c317b341982C82c47755fB"
+    },
+    "sepolia": {
+      "USDC": "0xFe00F83207d35A1d339A148941445b446B2f46C3",
+      "USDT": "0x7F52db5e4a91da74745a6030ed4bcDE3e29b40CD"
+    },
+    "solanaDevnet": {
+      "USDC": "4Hpm8L2sUFUWPUbqZjYC6mbVRSV7W32WBMUeY9ndA1Fr",
+      "USDT": "FH573FJpQi2UdE9Z1hXjWp3D4NJr3euq9LE9NV4GBgTp"
+    }
   }
 }

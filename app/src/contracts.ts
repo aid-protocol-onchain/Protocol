@@ -32,6 +32,19 @@ export function escrowFor(campaignId: string, chainId: number): `0x${string}` | 
   return CAMPAIGN_ESCROWS[campaignId]?.[chainId];
 }
 
+// Whitelisted test stablecoins per EVM chain (6 decimals, open-mint test tokens).
+export const TOKEN_DECIMALS = 6;
+export const TOKENS: Record<number, { USDC: `0x${string}`; USDT: `0x${string}` }> = {
+  [baseSepolia.id]: {
+    USDC: "0xbEE095934e857c8661E7906E5178b794AE512E6b",
+    USDT: "0x93f85a3C7DD94B4815c317b341982C82c47755fB",
+  },
+  [sepolia.id]: {
+    USDC: "0xFe00F83207d35A1d339A148941445b446B2f46C3",
+    USDT: "0x7F52db5e4a91da74745a6030ed4bcDE3e29b40CD",
+  },
+};
+
 // Chain ids this campaign has a deployed escrow on.
 export function campaignChainIds(campaignId: string): number[] {
   return Object.keys(CAMPAIGN_ESCROWS[campaignId] ?? {}).map(Number);
@@ -50,6 +63,12 @@ export interface SolanaCampaign {
 // Per-campaign Solana deployment, keyed by the D1 campaign id.
 export const SOLANA_CAMPAIGNS: Record<string, SolanaCampaign> = {
   "ve-quake-2026": { id: 1, campaignPda: "6bdycQjj3TH9dHmebHwumaUUfhBwRzCYKSuUvZruzv5j" },
+};
+
+// Whitelisted SPL mints on devnet (6 decimals).
+export const SOLANA_TOKENS: { USDC: string; USDT: string } = {
+  USDC: "4Hpm8L2sUFUWPUbqZjYC6mbVRSV7W32WBMUeY9ndA1Fr",
+  USDT: "FH573FJpQi2UdE9Z1hXjWp3D4NJr3euq9LE9NV4GBgTp",
 };
 
 export function solanaCampaign(campaignId: string): SolanaCampaign | undefined {
