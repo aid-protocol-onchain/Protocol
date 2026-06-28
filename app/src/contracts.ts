@@ -8,6 +8,7 @@ export const FACTORY = "0xfBfeA1576980F5E9Fd562cB13621316F0abCC461" as const;
 export const CAMPAIGN_ESCROWS: Record<string, Partial<Record<number, `0x${string}`>>> = {
   "ve-quake-2026": {
     [baseSepolia.id]: "0x27BdE55Cffdd3493E1437cfB9b8986D7C953c822",
+    [sepolia.id]: "0x27BdE55Cffdd3493E1437cfB9b8986D7C953c822",
   },
 };
 
