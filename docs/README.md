@@ -18,6 +18,7 @@ The ADRs record the load-bearing choices and their trade-offs:
 - [ADR-004: Public-identity verification (Model A)](adr/ADR-004-public-identity-verification.md)
 - [ADR-005: Multi-chain SVM and EVM](adr/ADR-005-multichain-svm-evm.md)
 - [ADR-006: Frontend on Cloudflare, no Next.js](adr/ADR-006-frontend-cloudflare-no-nextjs.md)
+- [ADR-007: Fiat and walletless donations](adr/ADR-007-fiat-and-walletless-donations.md)
 
 ## Design
 
