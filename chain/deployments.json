@@ -1,0 +1,30 @@
+{
+  "evm": {
+    "sepolia": {
+      "chainId": 11155111,
+      "factory": "0xfBfeA1576980F5E9Fd562cB13621316F0abCC461",
+      "authority": "0x2490c0BDD0D0f6074624828Bf7013335bf381239",
+      "explorer": "https://sepolia.etherscan.io"
+    },
+    "baseSepolia": {
+      "chainId": 84532,
+      "factory": "0xfBfeA1576980F5E9Fd562cB13621316F0abCC461",
+      "authority": "0x2490c0BDD0D0f6074624828Bf7013335bf381239",
+      "explorer": "https://sepolia.basescan.org"
+    }
+  },
+  "solana": {
+    "devnet": {
+      "programId": "AVayPFmfGivPALcE93L8gfULQwQ6GPoVGGpEu9VSRSVT",
+      "authority": null,
+      "explorer": "https://explorer.solana.com",
+      "status": "deployed",
+      "deployTx": "5RTPvMZbgPQRW8ERVGrBvxDJngtf9m3R6PipXq5j911e8NLQbN3yxiw7qiiAEAJstNiR295XoGayMXP2x8261TYg"
+    }
+  },
+  "campaigns": {
+    "ve-quake-2026": {
+      "baseSepolia": "0x27BdE55Cffdd3493E1437cfB9b8986D7C953c822"
+    }
+  }
+}

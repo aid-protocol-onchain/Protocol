@@ -1,0 +1,55 @@
+# ───────────────────────── secrets, NEVER commit ─────────────────────────
+.env
+.env.*
+!.env.example
+.dev.vars
+.cloudflare.env
+.admin-token
+*.admin-token
+# deployer / signer keypairs (Solana + EVM)
+*-deployer*.json
+.devnet-deployer.json
+chain/solana/.devnet-deployer.json
+**/id.json
+**/*keypair*.json
+*.pem
+*.key
+
+# ───────────────────────── dependencies / builds ─────────────────────────
+node_modules/
+dist/
+build/
+.wrangler/
+.astro/
+*.tsbuildinfo
+
+# Rust / Anchor / Solana
+target/
+.anchor/
+test-ledger/
+
+# Foundry / EVM
+out/
+cache/
+chain/evm/lib/
+chain/evm/broadcast/
+chain/evm/cache/
+lcov.info
+
+# ───────────────────────── local tooling (not product) ─────────────────────────
+.claude/
+_bmad/
+{output_folder}/
+
+# ───────────────────────── dev artifacts / QA screenshots ─────────────────────────
+.playwright-mcp/
+# root-level screenshots from local QA (real assets live under app/public, app/src/assets)
+/*.png
+STATUS.md
+
+# ───────────────────────── editor / OS ─────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

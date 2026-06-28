@@ -1,0 +1,16 @@
+[package]
+name = "svm-tests"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Standalone (detached from the Anchor workspace) so `anchor build` never tries
+# to compile these host-only tests for the SBF target.
+[workspace]
+
+[dev-dependencies]
+litesvm = "0.6"
+solana-sdk = "2"
+sha2 = "0.10"
+spl-token = "7"
+spl-associated-token-account = "6"

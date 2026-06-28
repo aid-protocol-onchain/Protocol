@@ -1,0 +1,31 @@
+name = "aid-protocol-dev"
+main = "worker/index.ts"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+# Refresh per-campaign relief news feeds every 2 hours.
+[triggers]
+crons = ["0 */2 * * *"]
+
+# D1 / KV / R2 ids are filled in by the provisioning step (scripts/provision.sh).
+[[d1_databases]]
+binding = "DB"
+database_name = "aid-protocol-dev"
+database_id = "8236b47a-0857-4669-85a2-4d4914157cc9"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "edc92ccfd094405da105a7eecc2bc617"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "aid-protocol-media-dev"
+
+[[routes]]
+pattern = "dev.aidprotocol.org"
+custom_domain = true

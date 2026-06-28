@@ -1,0 +1,16 @@
+# Reproducible contract toolchains (AD-10). Repo root is mounted at /work.
+services:
+  foundry:
+    image: ghcr.io/foundry-rs/foundry:stable
+    working_dir: /work/chain/evm
+    entrypoint: ["sh", "-c"]
+    volumes:
+      - ../../:/work
+
+  # Official Solana Foundation Anchor image (Rust + Solana CLI + Anchor + platform-tools).
+  anchor:
+    image: solanafoundation/anchor:v1.0.2
+    working_dir: /work/chain/solana
+    entrypoint: ["sh", "-c"]
+    volumes:
+      - ../../:/work

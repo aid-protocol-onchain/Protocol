@@ -1,0 +1,13 @@
+name = "aid-protocol"
+main = "index.js"
+compatibility_date = "2026-06-01"
+
+# Production apex serves the branded coming-soon until launch.
+# The full app runs at dev.aidprotocol.org (separate worker).
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[routes]]
+pattern = "aidprotocol.org"
+custom_domain = true
