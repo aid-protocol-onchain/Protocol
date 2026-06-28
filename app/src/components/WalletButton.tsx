@@ -1,14 +1,14 @@
 import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { injected } from "wagmi/connectors";
 
 function short(addr: string) {
   return addr.slice(0, 6) + "..." + addr.slice(-4);
 }
 
-// EVM wallet connect (Story 5.1). Solana connect is added in a follow-up.
+// EVM wallet connect. Uses the connector instantiated in the wagmi config
+// (passing a fresh injected() factory to connect() is a no-op in wagmi v3).
 export function WalletButton() {
   const { address, isConnected } = useAccount();
-  const { connect, isPending } = useConnect();
+  const { connectors, connect, isPending, error } = useConnect();
   const { disconnect } = useDisconnect();
 
   if (isConnected && address) {
@@ -19,14 +19,19 @@ export function WalletButton() {
     );
   }
 
+  const connector = connectors.find((c) => c.id === "injected") ?? connectors[0];
+  const noWallet = error?.name === "ConnectorNotFoundError";
+
   return (
     <button
       className="btn btn-wallet"
-      onClick={() => connect({ connector: injected() })}
+      disabled={!connector || isPending}
+      onClick={() => connector && connect({ connector })}
+      title={noWallet ? "No browser wallet detected (install MetaMask)" : undefined}
       aria-label="Connect wallet"
     >
       <i className="ti ti-wallet" aria-hidden="true" />{" "}
-      <span className="btn-label">{isPending ? "Connecting" : "Connect wallet"}</span>
+      <span className="btn-label">{isPending ? "Connecting" : noWallet ? "No wallet found" : "Connect wallet"}</span>
     </button>
   );
 }

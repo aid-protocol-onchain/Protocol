@@ -1,26 +1,25 @@
 import { useState } from "react";
 import { parseEther } from "viem";
-import { useAccount, useConnect, useSwitchChain, useChainId, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { injected } from "wagmi/connectors";
-import { ESCROW_ABI, EVM_CHAIN_ID, EXPLORER_TX, escrowFor } from "../contracts";
+import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { ESCROW_ABI, EXPLORER_TX, CHAIN_NAME, escrowFor, campaignChainIds } from "../contracts";
 
-const CHAIN_LABEL: Record<string, string> = { base: "Base Sepolia", ethereum: "Sepolia", solana: "Solana devnet" };
-
+// Donate to a campaign's on-chain escrow. The wallet is connected from the nav,
+// and the chain is whatever the connected wallet is on: there is no chain picker.
+// If the wallet is on a network the campaign is not deployed on, we offer a switch.
 export function DonatePanel({ campaignId }: { campaignId: string }) {
-  const [chain, setChain] = useState<"base" | "ethereum" | "solana">("base");
   const [anon, setAnon] = useState(false);
   const [amount, setAmount] = useState("0.001");
 
   const { isConnected } = useAccount();
-  const { connect } = useConnect();
-  const { switchChain } = useSwitchChain();
   const activeChainId = useChainId();
-  const { writeContract, data: txHash, isPending, error, reset } = useWriteContract();
+  const { switchChain } = useSwitchChain();
+  const { writeContract, data: txHash, isPending, error } = useWriteContract();
   const { isLoading: confirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
 
-  const targetId = EVM_CHAIN_ID[chain];
-  const escrow = chain === "solana" ? undefined : escrowFor(campaignId, targetId ?? 0);
-  const wrongChain = isConnected && targetId !== undefined && activeChainId !== targetId;
+  const chains = campaignChainIds(campaignId);
+  const escrow = escrowFor(campaignId, activeChainId);
+  const target = chains[0]; // preferred network to switch to
+  const acceptsList = chains.map((c) => CHAIN_NAME[c] ?? `chain ${c}`).join(", ");
 
   function donate() {
     if (!escrow) return;
@@ -30,7 +29,7 @@ export function DonatePanel({ campaignId }: { campaignId: string }) {
       functionName: "donateNative",
       args: [anon],
       value: parseEther(amount || "0"),
-      chainId: targetId,
+      chainId: activeChainId,
     });
   }
 
@@ -38,26 +37,29 @@ export function DonatePanel({ campaignId }: { campaignId: string }) {
     <div className="panel donate">
       <h2 style={{ fontSize: 17, margin: "0 0 4px" }}>Donate</h2>
 
-      <div className="field-label">Chain</div>
-      <div className="seg">
-        {(["base", "ethereum", "solana"] as const).map((ch) => (
-          <div key={ch} className={chain === ch ? "on" : ""} onClick={() => { setChain(ch); reset(); }}>
-            {ch === "ethereum" ? "ETH" : ch[0].toUpperCase() + ch.slice(1)}
-          </div>
-        ))}
-      </div>
-
-      {chain === "solana" ? (
-        <div className="note" style={{ marginTop: 12 }}>
-          <i className="ti ti-clock" aria-hidden="true" /> Solana devnet program goes live once the deployer is funded. SOL and SPL donations land here then.
+      {chains.length === 0 ? (
+        <div className="note" style={{ marginTop: 10 }}>
+          <i className="ti ti-info-circle" aria-hidden="true" /> This campaign is not yet deployed on-chain.
+        </div>
+      ) : !isConnected ? (
+        <div className="note" style={{ marginTop: 10 }}>
+          <i className="ti ti-wallet" aria-hidden="true" /> Connect your wallet (top right) to donate. This campaign accepts {acceptsList}.
         </div>
       ) : !escrow ? (
-        <div className="note" style={{ marginTop: 12 }}>
-          <i className="ti ti-info-circle" aria-hidden="true" /> This campaign is not yet deployed on {CHAIN_LABEL[chain]}.
-        </div>
+        <>
+          <div className="note" style={{ marginTop: 10 }}>
+            <i className="ti ti-switch-horizontal" aria-hidden="true" /> Your wallet is on {CHAIN_NAME[activeChainId] ?? "an unsupported network"}. This campaign accepts {acceptsList}.
+          </div>
+          <button className="btn btn-primary btn-block" onClick={() => switchChain({ chainId: target })}>
+            <i className="ti ti-switch-horizontal" aria-hidden="true" /> Switch to {CHAIN_NAME[target] ?? "the right network"}
+          </button>
+        </>
       ) : (
         <>
-          <div className="field-label">Amount ({chain === "ethereum" ? "SepoliaETH" : "ETH"})</div>
+          <div className="faint" style={{ margin: "6px 0 2px" }}>
+            <i className="ti ti-link" style={{ verticalAlign: -2 }} aria-hidden="true" /> Donating on {CHAIN_NAME[activeChainId]}
+          </div>
+          <div className="field-label">Amount (ETH)</div>
           <input className="inp" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" />
           <div className="seg" style={{ marginTop: 8 }}>
             {["0.001", "0.005", "0.01"].map((a) => (
@@ -70,25 +72,15 @@ export function DonatePanel({ campaignId }: { campaignId: string }) {
             <input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} />
           </div>
 
-          {!isConnected ? (
-            <button className="btn btn-primary btn-block" onClick={() => connect({ connector: injected() })}>
-              <i className="ti ti-wallet" aria-hidden="true" /> Connect wallet
-            </button>
-          ) : wrongChain ? (
-            <button className="btn btn-primary btn-block" onClick={() => switchChain({ chainId: targetId! })}>
-              <i className="ti ti-switch-horizontal" aria-hidden="true" /> Switch to {CHAIN_LABEL[chain]}
-            </button>
-          ) : (
-            <button className="btn btn-primary btn-block" onClick={donate} disabled={isPending || confirming}>
-              <i className="ti ti-heart" aria-hidden="true" />{" "}
-              {isPending ? "Confirm in wallet…" : confirming ? "Recording on-chain…" : `Donate ${amount} ETH`}
-            </button>
-          )}
+          <button className="btn btn-primary btn-block" onClick={donate} disabled={isPending || confirming}>
+            <i className="ti ti-heart" aria-hidden="true" />{" "}
+            {isPending ? "Confirm in wallet…" : confirming ? "Recording on-chain…" : `Donate ${amount} ETH`}
+          </button>
 
           {isSuccess && txHash && (
             <div className="note" style={{ color: "var(--trust)" }}>
               <i className="ti ti-circle-check" aria-hidden="true" /> Recorded.{" "}
-              <a href={`${EXPLORER_TX[targetId!]}${txHash}`} target="_blank" rel="noreferrer">View transaction</a>
+              <a href={`${EXPLORER_TX[activeChainId]}${txHash}`} target="_blank" rel="noreferrer">View transaction</a>
             </div>
           )}
           {error && (

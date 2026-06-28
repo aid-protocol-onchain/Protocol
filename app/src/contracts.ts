@@ -22,8 +22,18 @@ export const EXPLORER_TX: Record<number, string> = {
   [sepolia.id]: "https://sepolia.etherscan.io/tx/",
 };
 
+export const CHAIN_NAME: Record<number, string> = {
+  [baseSepolia.id]: "Base Sepolia",
+  [sepolia.id]: "Sepolia",
+};
+
 export function escrowFor(campaignId: string, chainId: number): `0x${string}` | undefined {
   return CAMPAIGN_ESCROWS[campaignId]?.[chainId];
+}
+
+// Chain ids this campaign has a deployed escrow on.
+export function campaignChainIds(campaignId: string): number[] {
+  return Object.keys(CAMPAIGN_ESCROWS[campaignId] ?? {}).map(Number);
 }
 
 // Minimal ABI for the donor-facing escrow entry points.
