@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { WalletButton } from "./WalletButton";
+import { XSignIn } from "./XSignIn";
 
 export function Mark({ height = 30 }: { height?: number }) {
   return (
@@ -45,6 +46,7 @@ export function Layout() {
               <NavLink to="/news" className={linkClass}>News</NavLink>
               <NavLink to="/apply" className={linkClass}>Request aid</NavLink>
             </div>
+            <XSignIn />
             <WalletButton />
             <button className="nav-burger" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen((v) => !v)}>
               <i className={`ti ${open ? "ti-x" : "ti-menu-2"}`} aria-hidden="true" />

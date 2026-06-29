@@ -4,6 +4,8 @@ interface Env {
   MEDIA: R2Bucket;
   ASSETS: Fetcher;
   ADMIN_TOKEN: string;
+  X_CLIENT_ID: string;
+  X_CLIENT_SECRET: string;
 }
 
 const json = (data: unknown, status = 200) =>
@@ -11,6 +13,22 @@ const json = (data: unknown, status = 200) =>
     status,
     headers: { "content-type": "application/json; charset=utf-8" },
   });
+
+function b64url(bytes: Uint8Array): string {
+  let s = "";
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function pkceChallenge(verifier: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  return b64url(new Uint8Array(digest));
+}
+
+function cookieValue(req: Request, name: string): string | null {
+  const m = (req.headers.get("cookie") || "").match(new RegExp(`(?:^|; )${name}=([^;]+)`));
+  return m ? m[1] : null;
+}
 
 function decodeXml(s: string): string {
   return s
@@ -123,6 +141,88 @@ export default {
 
     if (path === "/api/health") {
       return json({ ok: true, service: "aid-protocol", env: "dev", time: new Date().toISOString() });
+    }
+
+    // ---- Sign in with X (OAuth 2.0 + PKCE, all server-side) ----
+    const redirectUri = `${url.origin}/api/auth/x/callback`;
+
+    if (path === "/api/auth/x/login") {
+      const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
+      const state = b64url(crypto.getRandomValues(new Uint8Array(16)));
+      await env.KV.put(`xoauth:${state}`, verifier, { expirationTtl: 600 });
+      const auth = new URL("https://twitter.com/i/oauth2/authorize");
+      auth.searchParams.set("response_type", "code");
+      auth.searchParams.set("client_id", env.X_CLIENT_ID);
+      auth.searchParams.set("redirect_uri", redirectUri);
+      auth.searchParams.set("scope", "users.read tweet.read offline.access");
+      auth.searchParams.set("state", state);
+      auth.searchParams.set("code_challenge", await pkceChallenge(verifier));
+      auth.searchParams.set("code_challenge_method", "S256");
+      return Response.redirect(auth.toString(), 302);
+    }
+
+    if (path === "/api/auth/x/callback") {
+      const code = url.searchParams.get("code");
+      const state = url.searchParams.get("state") || "";
+      const verifier = state ? await env.KV.get(`xoauth:${state}`) : null;
+      if (!code || !verifier) return Response.redirect(`${url.origin}/?x=error`, 302);
+      await env.KV.delete(`xoauth:${state}`);
+      try {
+        const tokenRes = await fetch("https://api.twitter.com/2/oauth2/token", {
+          method: "POST",
+          headers: {
+            "content-type": "application/x-www-form-urlencoded",
+            authorization: "Basic " + btoa(`${env.X_CLIENT_ID}:${env.X_CLIENT_SECRET}`),
+          },
+          body: new URLSearchParams({
+            grant_type: "authorization_code",
+            code,
+            redirect_uri: redirectUri,
+            code_verifier: verifier,
+            client_id: env.X_CLIENT_ID,
+          }),
+        });
+        const tok = (await tokenRes.json()) as { access_token?: string };
+        if (!tok.access_token) return Response.redirect(`${url.origin}/?x=error`, 302);
+        const meRes = await fetch(
+          "https://api.twitter.com/2/users/me?user.fields=profile_image_url,username,name",
+          { headers: { authorization: `Bearer ${tok.access_token}` } }
+        );
+        const me = (await meRes.json()) as { data?: { id: string; username: string; name: string; profile_image_url?: string } };
+        if (!me.data) return Response.redirect(`${url.origin}/?x=error`, 302);
+        const session = b64url(crypto.getRandomValues(new Uint8Array(24)));
+        await env.KV.put(
+          `session:${session}`,
+          JSON.stringify({ id: me.data.id, handle: me.data.username, name: me.data.name, avatar: me.data.profile_image_url || "" }),
+          { expirationTtl: 60 * 60 * 24 * 30 }
+        );
+        return new Response(null, {
+          status: 302,
+          headers: {
+            location: `${url.origin}/?x=ok`,
+            "set-cookie": `aid_session=${session}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`,
+          },
+        });
+      } catch {
+        return Response.redirect(`${url.origin}/?x=error`, 302);
+      }
+    }
+
+    if (path === "/api/auth/me") {
+      const sid = cookieValue(request, "aid_session");
+      const data = sid ? await env.KV.get(`session:${sid}`) : null;
+      return json({ user: data ? JSON.parse(data) : null });
+    }
+
+    if (path === "/api/auth/logout" && request.method === "POST") {
+      const sid = cookieValue(request, "aid_session");
+      if (sid) await env.KV.delete(`session:${sid}`);
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: {
+          "content-type": "application/json",
+          "set-cookie": "aid_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0",
+        },
+      });
     }
 
     if (path === "/api/campaigns") {
