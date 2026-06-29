@@ -7,6 +7,9 @@ compatibility_flags = ["nodejs_compat"]
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
+# Run the Worker first for API routes so browser navigations to /api/* (e.g. the
+# OAuth redirect) hit the Worker instead of the SPA fallback serving index.html.
+run_worker_first = ["/api/*"]
 
 # Refresh per-campaign relief news feeds every 2 hours.
 [triggers]
