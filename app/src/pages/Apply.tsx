@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useXAuth } from "../wallet/xauth";
 
 const FIELDS = [
   { k: "org_name", label: "Organization or your name", ph: "Atlas Mutual Aid" },
@@ -11,6 +12,7 @@ const FIELDS = [
 ] as const;
 
 export function Apply() {
+  const { user, loading } = useXAuth();
   const [form, setForm] = useState<Record<string, string>>({});
   const [summary, setSummary] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
@@ -37,6 +39,25 @@ export function Apply() {
       setState("error");
       setMsg(String(e));
     }
+  }
+
+  if (!loading && !user) {
+    return (
+      <section className="hero" style={{ marginTop: 26 }}>
+        <div className="eyebrow">Request aid</div>
+        <h1>Sign in with X to <span className="grad-text">request aid.</span></h1>
+        <p>
+          To open a relief campaign, sign in with your public X identity. We verify the public identity of every
+          requester before a campaign goes live. No KYC, no documents.
+        </p>
+        <a className="btn-x" href="/api/auth/x/login" aria-label="Sign in with X" style={{ display: "inline-flex" }}>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          </svg>
+          <span className="x-label">Sign in with X</span>
+        </a>
+      </section>
+    );
   }
 
   if (state === "done") {

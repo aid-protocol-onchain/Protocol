@@ -45,7 +45,7 @@ export function DonatePanel({ campaignId }: { campaignId: string }) {
   const solCampaign = solanaCampaign(campaignId);
   const escrow = escrowFor(campaignId, activeChainId);
   const target = evmChains[0];
-  const accepts = [...evmChains.map((c) => CHAIN_NAME[c] ?? `chain ${c}`), ...(solCampaign ? ["Solana devnet"] : [])].join(", ");
+  const accepts = evmChains.map((c) => CHAIN_NAME[c] ?? `chain ${c}`).join(", ");
 
   const onSolana = sol.connected;
   const nativeLabel = onSolana ? "SOL" : "ETH";

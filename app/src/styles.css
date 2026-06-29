@@ -347,3 +347,30 @@ button { font-family: inherit; cursor: pointer; }
   .btn-x .x-label { display: none; }
   .xhandle { max-width: 80px; }
 }
+
+/* wallet menu options (two-line) */
+.wallet-pop .wopt { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; background: none; border: none; padding: 10px 12px; border-radius: 9px; color: var(--ink); }
+.wallet-pop .wopt:hover:not(:disabled) { background: var(--page); }
+.wallet-pop .wopt:disabled { opacity: 0.5; cursor: not-allowed; }
+.wopt-ic { font-size: 18px; color: var(--brand); flex-shrink: 0; }
+.wopt b { display: block; font-size: 14px; font-weight: 600; }
+.wopt-sub { display: block; font-size: 12px; color: var(--ink-soft); }
+
+.wopt-err { font-size: 12px; color: var(--danger); padding: 6px 12px; max-width: 220px; }
+
+/* wallet connect modal */
+.modal-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(14,23,38,0.55); display: grid; place-items: center; padding: 20px; backdrop-filter: blur(2px); }
+.modal-card { width: 100%; max-width: 380px; background: var(--card); border-radius: var(--radius-lg); box-shadow: 0 20px 60px rgba(14,23,38,0.3); padding: 18px; animation: modalIn .15s ease; }
+@keyframes modalIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.modal-head h3 { margin: 0; font-size: 17px; font-weight: 600; }
+.modal-x { background: none; border: none; color: var(--ink-faint); font-size: 18px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; }
+.modal-x:hover { background: var(--page); color: var(--ink); }
+.wallet-list { display: flex; flex-direction: column; gap: 6px; }
+.wallet-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; transition: border-color .12s, background .12s; }
+.wallet-row:hover { border-color: var(--brand); background: var(--page); }
+.wallet-ic { width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0; object-fit: cover; }
+.wallet-ic-fallback { display: grid; place-items: center; background: var(--brand-bg); color: var(--brand); font-size: 18px; }
+.wallet-name { font-size: 15px; font-weight: 600; display: flex; flex-direction: column; }
+.wallet-sub { font-size: 12px; font-weight: 400; color: var(--ink-soft); }
+.wallet-empty { font-size: 13px; color: var(--ink-soft); padding: 10px 4px; text-align: center; }

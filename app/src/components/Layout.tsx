@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { WalletButton } from "./WalletButton";
 import { XSignIn } from "./XSignIn";
+import { useXAuth } from "../wallet/xauth";
 
 export function Mark({ height = 30 }: { height?: number }) {
   return (
@@ -25,6 +26,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) => (isActive ? "navlink 
 
 export function Layout() {
   const [open, setOpen] = useState(false);
+  const { user } = useXAuth();
   const loc = useLocation();
   useEffect(() => { setOpen(false); }, [loc.pathname]);
 
@@ -44,7 +46,7 @@ export function Layout() {
               <NavLink to="/" end className={linkClass}>Disasters</NavLink>
               <NavLink to="/leaderboard" className={linkClass}>Leaderboard</NavLink>
               <NavLink to="/news" className={linkClass}>News</NavLink>
-              <NavLink to="/apply" className={linkClass}>Request aid</NavLink>
+              {user && <NavLink to="/apply" className={linkClass}>Request aid</NavLink>}
             </div>
             <XSignIn />
             <WalletButton />
@@ -58,7 +60,7 @@ export function Layout() {
             <NavLink to="/" end className={linkClass}>Disasters</NavLink>
             <NavLink to="/leaderboard" className={linkClass}>Leaderboard</NavLink>
             <NavLink to="/news" className={linkClass}>News</NavLink>
-            <NavLink to="/apply" className={linkClass}>Request aid</NavLink>
+            {user && <NavLink to="/apply" className={linkClass}>Request aid</NavLink>}
           </div>
         )}
       </header>

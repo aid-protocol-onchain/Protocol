@@ -20,6 +20,7 @@ import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { wagmiConfig } from "./wallet/wagmi";
 import { SolanaProvider } from "./wallet/solana";
+import { XAuthProvider } from "./wallet/xauth";
 import "./styles.css";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <SolanaProvider>
+          <XAuthProvider>
           <BrowserRouter>
           <Routes>
             <Route element={<Layout />}>
@@ -46,6 +48,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             </Route>
             </Routes>
           </BrowserRouter>
+          </XAuthProvider>
         </SolanaProvider>
       </QueryClientProvider>
     </WagmiProvider>

@@ -1,30 +1,11 @@
-import { useEffect, useState } from "react";
+import { useXAuth } from "../wallet/xauth";
 
-interface XUser {
-  id: string;
-  handle: string;
-  name: string;
-  avatar: string;
-}
-
-// "Sign in with X" (OAuth 2.0). The flow runs entirely on the Worker; this just
-// links to /api/auth/x/login and reflects the session from /api/auth/me.
+// "Sign in with X" (OAuth 2.0). The flow runs entirely on the Worker; this reflects
+// the shared session and links to /api/auth/x/login.
 export function XSignIn() {
-  const [user, setUser] = useState<XUser | null | undefined>(undefined); // undefined = loading
+  const { user, loading, signOut } = useXAuth();
 
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d: { user: XUser | null }) => setUser(d.user))
-      .catch(() => setUser(null));
-  }, []);
-
-  async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    setUser(null);
-  }
-
-  if (user === undefined) return null; // loading, render nothing to avoid flicker
+  if (loading) return null; // avoid flicker
 
   if (user) {
     return (
@@ -35,7 +16,7 @@ export function XSignIn() {
           <span className="xav xav-fallback">{user.handle.slice(0, 1).toUpperCase()}</span>
         )}
         <span className="xhandle">@{user.handle}</span>
-        <button className="xlogout" onClick={logout} aria-label="Sign out of X">
+        <button className="xlogout" onClick={signOut} aria-label="Sign out of X">
           <i className="ti ti-x" aria-hidden="true" />
         </button>
       </div>
