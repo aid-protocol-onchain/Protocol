@@ -31,6 +31,7 @@ export function WalletButton() {
   }
 
   const injected = connectors.find((c) => c.id === "injected") ?? connectors[0];
+  const coinbase = connectors.find((c) => c.id === "coinbaseWalletSDK" || c.name.toLowerCase().includes("coinbase"));
 
   return (
     <div className="wallet-menu">
@@ -42,6 +43,16 @@ export function WalletButton() {
         <>
           <div className="wallet-backdrop" onClick={() => setOpen(false)} />
           <div className="wallet-pop">
+            {coinbase && (
+              <button
+                onClick={() => {
+                  connect({ connector: coinbase });
+                  setOpen(false);
+                }}
+              >
+                <i className="ti ti-mail" aria-hidden="true" /> Email / passkey (no wallet)
+              </button>
+            )}
             <button
               onClick={() => {
                 if (injected) connect({ connector: injected });
