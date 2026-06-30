@@ -53,7 +53,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 .nav > .wrap { width: 100%; display: flex; align-items: center; justify-content: space-between; }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; flex-shrink: 0; }
-.wordmark { font-weight: 700; font-size: 17px; letter-spacing: 0.06em; color: var(--ink); white-space: nowrap; }
+.wordmark { font-weight: 700; font-size: 21px; letter-spacing: 0.08em; color: var(--ink); white-space: nowrap; }
 .wordmark-light { font-weight: 400; color: var(--ink-soft); letter-spacing: 0.12em; }
 .nav-links { display: flex; align-items: center; gap: 18px; font-size: 14px; color: var(--ink-soft); }
 .nav-mid { display: flex; align-items: center; gap: 18px; white-space: nowrap; }
@@ -377,5 +377,5 @@ button { font-family: inherit; cursor: pointer; }
 
 .wallet-group-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; margin: 4px 2px 8px; }
 
-.brand-logo { height: 40px; width: auto; display: block; }
-@media (max-width: 640px) { .brand-logo { height: 34px; } }
+.brand-icon { height: 46px; width: 46px; display: block; margin-left: 16px; }
+@media (max-width: 640px) { .brand-icon { height: 38px; width: 38px; margin-left: 8px; } }

@@ -21,22 +21,22 @@ function cookieVal(req, name) {
 }
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json" } });
 
-// Best-effort quality check via RapidAPI (works once the key is subscribed to twitter241).
-async function twitterFollowers(handle, key) {
-  if (!key) return null;
+// Validate the X account via RapidAPI (twitter241). Returns whether it's a real,
+// active account and its follower count. If the key is missing or the call fails,
+// we allow the join (X OAuth already proved account ownership).
+async function checkTwitter(handle, key) {
+  if (!key) return { valid: true, followers: null };
   try {
-    const r = await fetch(`https://twitter241.p.rapidapi.com/user-by-username?username=${encodeURIComponent(handle)}`, {
+    const r = await fetch(`https://twitter241.p.rapidapi.com/user?username=${encodeURIComponent(handle)}`, {
       headers: { "x-rapidapi-host": "twitter241.p.rapidapi.com", "x-rapidapi-key": key },
     });
     const j = await r.json();
-    const f =
-      j?.result?.data?.user?.result?.legacy?.followers_count ??
-      j?.data?.followers_count ??
-      j?.followers_count ??
-      null;
-    return typeof f === "number" ? f : null;
+    const u = j && j.result && j.result.data && j.result.data.user && j.result.data.user.result;
+    if (!u || u.__typename !== "User") return { valid: false, followers: null };
+    const f = u.legacy && u.legacy.followers_count;
+    return { valid: true, followers: typeof f === "number" ? f : null };
   } catch {
-    return null;
+    return { valid: true, followers: null };
   }
 }
 
@@ -135,7 +135,9 @@ export default {
       if (existing) return json({ ok: true, already: true });
       const cnt = (await env.DB.prepare("SELECT COUNT(*) AS c FROM tester_whitelist").first()).c || 0;
       if (cnt >= SPOTS) return json({ error: { message: "Whitelist is full" } }, 409);
-      const followers = await twitterFollowers(u.handle, env.RAPIDAPI_KEY);
+      const chk = await checkTwitter(u.handle, env.RAPIDAPI_KEY);
+      if (!chk.valid) return json({ error: { message: "We couldn't verify your X account. Make sure it's public and active." } }, 400);
+      const followers = chk.followers;
       await env.DB.prepare(
         "INSERT INTO tester_whitelist (id, x_id, handle, email, name, avatar, followers, created_at) VALUES (?,?,?,?,?,?,?,?)"
       )
@@ -165,6 +167,7 @@ const HTML = `<!doctype html>
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:site" content="@aidprotocol_" />
 <meta name="theme-color" content="#050b14" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <style>
   :root{--ink:#eaf2ff;--soft:#9fb2cc;--faint:#64748b;--line:rgba(255,255,255,.10);--brand:#19d39f;--grad:linear-gradient(90deg,#3b82f6 0%,#22d3ee 50%,#34d399 100%);--bg:#050b14}
   *{box-sizing:border-box}html,body{margin:0}
@@ -177,8 +180,10 @@ const HTML = `<!doctype html>
   .wrap{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:0 24px}
   header{padding:30px 0}
   .mark{display:flex;align-items:center;gap:12px;opacity:0;animation:up .7s ease forwards}
-  .wm{font-weight:700;letter-spacing:.09em;font-size:18px}.wm span{font-weight:400;color:var(--soft);letter-spacing:.16em}
+  .wm{font-weight:700;letter-spacing:.09em;font-size:23px}.wm span{font-weight:400;color:var(--soft);letter-spacing:.16em}
   .hero{padding:30px 0 24px}
+  .herotag{font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:#bdf3e2;font-weight:600;margin:0 0 16px;opacity:0;animation:up .7s ease .15s forwards}
+  .herotag b{color:#7fb2ff;font-weight:600}
   .eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:13px;color:#bdf3e2;font-weight:600;background:rgba(25,211,159,.12);border:1px solid rgba(25,211,159,.28);border-radius:99px;padding:7px 14px;margin-bottom:22px;opacity:0;animation:up .7s ease .1s forwards}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--brand);animation:pulse 2s ease-out infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(25,211,159,.55)}70%{box-shadow:0 0 0 10px rgba(25,211,159,0)}100%{box-shadow:0 0 0 0 rgba(25,211,159,0)}}
@@ -221,10 +226,11 @@ const HTML = `<!doctype html>
   <div class="bg"><img id="hero" src="/hero-5.jpg" alt="" onload="this.classList.add('on')" /></div>
   <div class="wrap">
     <header>
-      <div class="mark"><img src="/aid-logo-dark.svg" alt="Aid Protocol" style="height:48px;width:auto;display:block" /></div>
+      <div class="mark"><img src="/favicon.svg" alt="" style="height:50px;width:50px;display:block" /><span class="wm">AID <span>PROTOCOL</span></span></div>
     </header>
     <section class="hero">
       <div class="eyebrow"><span class="dot"></span> Launching soon</div>
+      <div class="herotag">Lifeline for humanity · Powered by <b>crypto</b></div>
       <h1>A lifeline for disaster relief, <span class="grad">on-chain.</span></h1>
       <p class="lead">Aid Protocol is a non-profit, open-source platform where donations to verified disasters are recorded on-chain and released from escrow only against proof of spend. Give publicly or anonymously, on Solana or Ethereum.</p>
       <div class="cta">

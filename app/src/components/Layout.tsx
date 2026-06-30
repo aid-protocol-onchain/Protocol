@@ -38,7 +38,8 @@ export function Layout() {
       <header className="nav">
         <div className="wrap" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: 0 }}>
           <Link to="/" className="brand" aria-label="Aid Protocol home">
-            <img src="/aid-logo.svg" alt="Aid Protocol" className="brand-logo" />
+            <img src="/favicon.svg" alt="" className="brand-icon" />
+            <span className="wordmark">AID <span className="wordmark-light">PROTOCOL</span></span>
           </Link>
           <nav className="nav-links">
             <div className="nav-mid">
