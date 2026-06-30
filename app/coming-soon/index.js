@@ -211,7 +211,8 @@ export default {
       if (sess) {
         const u = JSON.parse(sess);
         const exists = await env.DB.prepare("SELECT 1 FROM tester_whitelist WHERE x_id=?").bind(u.id).first();
-        me = { handle: u.handle, in: !!exists };
+        const tg = await env.DB.prepare("SELECT chat_id FROM telegram_chats WHERE linked_x_id=?").bind(u.id).first();
+        me = { handle: u.handle, in: !!exists, telegram: !!tg };
       }
       return json({ count, spots: SPOTS, full: count >= SPOTS, me });
     }
@@ -247,6 +248,17 @@ export default {
       return json({ ok: true });
     }
 
+    // --- Telegram account linking: mint a one-time deep-link token bound to the X session (AD-12) ---
+    if (path === "/api/telegram/link/start" && request.method === "POST") {
+      const sid = cookieVal(request, "wl_session");
+      const sess = sid ? await env.KV.get(`wlsess:${sid}`) : null;
+      if (!sess) return json({ error: { message: "Sign in with X first" } }, 401);
+      const u = JSON.parse(sess);
+      const linkToken = b64url(crypto.getRandomValues(new Uint8Array(18)));
+      await env.KV.put(`tglink:${linkToken}`, u.id, { expirationTtl: 900 });
+      return json({ ok: true, url: `https://t.me/AidProtocolBot?start=${linkToken}` });
+    }
+
     // --- Telegram bot webhook ---
     if (path === "/api/telegram/webhook" && request.method === "POST") {
       const want = (env.TELEGRAM_WEBHOOK_SECRET || "").trim();
@@ -276,16 +288,26 @@ export default {
         const text = (msg.text || "").trim();
         if (text.startsWith("/start")) {
           const payload = text.split(/\s+/)[1] || "";
-          if (payload) await env.DB.prepare("UPDATE telegram_chats SET link_token=? WHERE chat_id=?").bind(payload, chatId).run();
-          const name = from.first_name ? " " + from.first_name : "";
-          const caption = `Welcome to <b>Aid Protocol</b>${name}.\n\nThis is how we reach testers, ambassadors, and campaign organizers: verification codes, test tasks, and proof-of-expense reminders.\n\nYou are connected. We will message you here when there is something to do. Send /help to see commands.`;
-          const photo = await tgCall(token, "sendPhoto", {
-            chat_id: chatId,
-            photo: `${url.origin}/welcome.png`,
-            parse_mode: "HTML",
-            caption,
-          });
-          if (!photo || !photo.ok) await tgSend(token, chatId, caption);
+          const linkedXid = payload ? await env.KV.get(`tglink:${payload}`) : null;
+          if (linkedXid) {
+            // Deep-link account linking: the one-time token proves the same person
+            // controls this Telegram chat and the authenticated X session (AD-12).
+            await env.KV.delete(`tglink:${payload}`);
+            await env.DB.prepare("UPDATE telegram_chats SET linked_x_id=? WHERE chat_id=?").bind(linkedXid, chatId).run();
+            await env.DB.prepare("UPDATE tester_whitelist SET telegram_chat_id=? WHERE x_id=?").bind(chatId, linkedXid).run();
+            const wl = await env.DB.prepare("SELECT handle FROM tester_whitelist WHERE x_id=?").bind(linkedXid).first();
+            await tgSend(token, chatId, `Connected${wl && wl.handle ? " to @" + wl.handle : ""}. Your Telegram is now linked to <b>Aid Protocol</b>. We will message you here with test tasks and reminders.`);
+          } else {
+            const name = from.first_name ? " " + from.first_name : "";
+            const caption = `Welcome to <b>Aid Protocol</b>${name}.\n\nThis is how we reach testers, ambassadors, and campaign organizers: verification codes, test tasks, and proof-of-expense reminders.\n\nYou are connected. We will message you here when there is something to do. Send /help to see commands.`;
+            const photo = await tgCall(token, "sendPhoto", {
+              chat_id: chatId,
+              photo: `${url.origin}/welcome.png`,
+              parse_mode: "HTML",
+              caption,
+            });
+            if (!photo || !photo.ok) await tgSend(token, chatId, caption);
+          }
         } else if (text.startsWith("/help")) {
           await tgSend(token, chatId, `<b>Aid Protocol bot</b>\n\n/start  connect this chat\n/id  show your chat id\n/help  this message\n\nWe send verification codes and reminders here.`);
         } else if (text.startsWith("/id")) {
