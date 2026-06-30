@@ -221,10 +221,7 @@ const HTML = `<!doctype html>
   <div class="bg"><img id="hero" src="/hero-5.jpg" alt="" onload="this.classList.add('on')" /></div>
   <div class="wrap">
     <header>
-      <div class="mark">
-        <svg height="30" viewBox="0 0 300 100" fill="none" aria-hidden="true"><defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="300" y2="0"><stop offset="0" stop-color="#3b82f6"/><stop offset=".5" stop-color="#22d3ee"/><stop offset="1" stop-color="#34d399"/></linearGradient></defs><path d="M24 80 L118 20 L200 80" stroke="url(#g)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M100 80 L178 48 L276 80" stroke="url(#g)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="80" r="8" fill="none" stroke="#3b82f6" stroke-width="6"/><circle cx="284" cy="80" r="8" fill="none" stroke="#34d399" stroke-width="6"/></svg>
-        <span class="wm">AID <span>PROTOCOL</span></span>
-      </div>
+      <div class="mark"><img src="/aid-logo-dark.svg" alt="Aid Protocol" style="height:48px;width:auto;display:block" /></div>
     </header>
     <section class="hero">
       <div class="eyebrow"><span class="dot"></span> Launching soon</div>

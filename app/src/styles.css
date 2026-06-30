@@ -376,3 +376,6 @@ button { font-family: inherit; cursor: pointer; }
 .wallet-empty { font-size: 13px; color: var(--ink-soft); padding: 10px 4px; text-align: center; }
 
 .wallet-group-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; margin: 4px 2px 8px; }
+
+.brand-logo { height: 40px; width: auto; display: block; }
+@media (max-width: 640px) { .brand-logo { height: 34px; } }
