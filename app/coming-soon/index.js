@@ -40,6 +40,32 @@ async function checkTwitter(handle, key) {
   }
 }
 
+// --- Telegram bot helpers ---
+async function tgCall(token, method, body) {
+  const r = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return r.json();
+}
+function tgSend(token, chatId, text, extra = {}) {
+  return tgCall(token, "sendMessage", {
+    chat_id: chatId,
+    text,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+    ...extra,
+  });
+}
+async function sha256hex(s) {
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function genCode() {
+  return String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -144,6 +170,118 @@ export default {
         .bind("tw-" + crypto.randomUUID().slice(0, 8), u.id, u.handle, email, u.name || "", u.avatar || "", followers, new Date().toISOString())
         .run();
       return json({ ok: true });
+    }
+
+    // --- Telegram bot webhook ---
+    if (path === "/api/telegram/webhook" && request.method === "POST") {
+      const want = (env.TELEGRAM_WEBHOOK_SECRET || "").trim();
+      const got = (request.headers.get("x-telegram-bot-api-secret-token") || "").trim();
+      if (!want || got !== want) {
+        return new Response("forbidden", { status: 403 });
+      }
+      const token = env.TELEGRAM_BOT_TOKEN;
+      let update;
+      try {
+        update = await request.json();
+      } catch {
+        return json({ ok: true });
+      }
+      const msg = update.message || update.edited_message;
+      if (msg && msg.chat && token) {
+        const chatId = String(msg.chat.id);
+        const from = msg.from || {};
+        const now = new Date().toISOString();
+        await env.DB.prepare(
+          `INSERT INTO telegram_chats (chat_id, username, first_name, last_name, created_at, last_seen)
+           VALUES (?,?,?,?,?,?)
+           ON CONFLICT(chat_id) DO UPDATE SET username=excluded.username, first_name=excluded.first_name, last_name=excluded.last_name, last_seen=excluded.last_seen`
+        )
+          .bind(chatId, from.username || null, from.first_name || null, from.last_name || null, now, now)
+          .run();
+        const text = (msg.text || "").trim();
+        if (text.startsWith("/start")) {
+          const payload = text.split(/\s+/)[1] || "";
+          if (payload) await env.DB.prepare("UPDATE telegram_chats SET link_token=? WHERE chat_id=?").bind(payload, chatId).run();
+          const name = from.first_name ? " " + from.first_name : "";
+          const caption = `Welcome to <b>Aid Protocol</b>${name}.\n\nThis is how we reach testers, ambassadors, and campaign organizers: verification codes, test tasks, and proof-of-expense reminders.\n\nYou are connected. We will message you here when there is something to do. Send /help to see commands.`;
+          const photo = await tgCall(token, "sendPhoto", {
+            chat_id: chatId,
+            photo: `${url.origin}/welcome.png`,
+            parse_mode: "HTML",
+            caption,
+          });
+          if (!photo || !photo.ok) await tgSend(token, chatId, caption);
+        } else if (text.startsWith("/help")) {
+          await tgSend(token, chatId, `<b>Aid Protocol bot</b>\n\n/start  connect this chat\n/id  show your chat id\n/help  this message\n\nWe send verification codes and reminders here.`);
+        } else if (text.startsWith("/id")) {
+          await tgSend(token, chatId, `Your chat id is <code>${chatId}</code>.`);
+        } else if (text) {
+          await tgSend(token, chatId, `Got it. Nothing to action right now. Send /help for what this bot does.`);
+        }
+      }
+      return json({ ok: true });
+    }
+
+    // --- 2FA: send a code via Telegram (or email when a provider is configured) ---
+    if (path === "/api/2fa/send" && request.method === "POST") {
+      let b = {};
+      try {
+        b = await request.json();
+      } catch {
+        /* ignore */
+      }
+      const channel = b.channel === "email" ? "email" : "telegram";
+      const purpose = String(b.purpose || "aid_request").slice(0, 40);
+      const target = String(b.target || "").trim();
+      if (!target) return json({ error: { message: "Missing target" } }, 400);
+      const code = genCode();
+      const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+      await env.DB.prepare(
+        "INSERT INTO twofa_codes (id, purpose, channel, target, code_hash, expires_at, attempts, used, created_at) VALUES (?,?,?,?,?,?,0,0,?)"
+      )
+        .bind("2fa-" + crypto.randomUUID().slice(0, 8), purpose, channel, target, await sha256hex(code), expires, new Date().toISOString())
+        .run();
+      const message = `Your Aid Protocol verification code is ${code}. It expires in 10 minutes.`;
+      if (channel === "telegram") {
+        let chatId = target.replace(/^@/, "");
+        if (!/^\d+$/.test(chatId)) {
+          const row = await env.DB.prepare("SELECT chat_id FROM telegram_chats WHERE username=?").bind(chatId).first();
+          if (!row) return json({ error: { message: "This Telegram user has not started the bot yet" } }, 400);
+          chatId = row.chat_id;
+        }
+        const res = await tgSend(env.TELEGRAM_BOT_TOKEN, chatId, message);
+        if (!res || !res.ok) return json({ error: { message: "Could not send Telegram message" } }, 400);
+        return json({ ok: true, channel: "telegram" });
+      }
+      if (!env.RESEND_API_KEY) return json({ error: { message: "Email sending is not configured yet" } }, 501);
+      const er = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
+        body: JSON.stringify({ from: "Aid Protocol <admin@aidprotocol.org>", to: [target], subject: "Your Aid Protocol verification code", text: message }),
+      });
+      if (!er.ok) return json({ error: { message: "Could not send email" } }, 400);
+      return json({ ok: true, channel: "email" });
+    }
+
+    if (path === "/api/2fa/verify" && request.method === "POST") {
+      let b = {};
+      try {
+        b = await request.json();
+      } catch {
+        /* ignore */
+      }
+      const target = String(b.target || "").trim();
+      const code = String(b.code || "").trim();
+      const purpose = String(b.purpose || "aid_request").slice(0, 40);
+      if (!target || !code) return json({ error: { message: "Missing target or code" } }, 400);
+      const row = await env.DB.prepare("SELECT * FROM twofa_codes WHERE target=? AND purpose=? AND used=0 ORDER BY created_at DESC LIMIT 1").bind(target, purpose).first();
+      if (!row) return json({ error: { message: "No pending code" } }, 400);
+      if (new Date(row.expires_at) < new Date()) return json({ error: { message: "Code expired" } }, 400);
+      if (row.attempts >= 5) return json({ error: { message: "Too many attempts" } }, 429);
+      const ok = (await sha256hex(code)) === row.code_hash;
+      await env.DB.prepare("UPDATE twofa_codes SET attempts=attempts+1, used=? WHERE id=?").bind(ok ? 1 : 0, row.id).run();
+      if (!ok) return json({ error: { message: "Incorrect code" } }, 400);
+      return json({ ok: true, verified: true });
     }
 
     if (path === "/" || path === "") {

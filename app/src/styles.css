@@ -283,14 +283,17 @@ button { font-family: inherit; cursor: pointer; }
   .nav-mid { display: none; }              /* collapse text links into burger */
   .nav-burger { display: inline-flex; }    /* show hamburger */
   .wordmark { font-size: 16px; }
+  .nav-links { gap: 10px; }
+  /* right side collapses to three equal 38px icon buttons: X · wallet · menu */
+  .btn-wallet .btn-label { display: none; }
+  .btn-wallet { padding: 0; width: 38px; height: 38px; justify-content: center; }
+  .btn-x { padding: 0; width: 38px; height: 38px; justify-content: center; }
   .hero h1 { font-size: 22px; }
   .metricrow { grid-template-columns: 1fr 1fr; }
   .metric:last-child { grid-column: 1 / -1; }
 }
-@media (max-width: 380px) {
-  .btn-wallet .btn-label { display: none; }  /* wallet icon only */
-  .btn-wallet { padding: 8px 10px; }
-  .wordmark-light { display: none; }         /* keep just "AID" + mark */
+@media (max-width: 430px) {
+  .wordmark-light { display: none; }         /* keep just "AID" + mark on small phones */
 }
 
 /* donor profile */
