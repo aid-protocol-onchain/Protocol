@@ -14,7 +14,8 @@ import {
   campaignChainIds,
   solanaCampaign,
 } from "../contracts";
-import { useSolana, donateSolana, donateSolanaToken } from "../wallet/solana";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { donateSolana, donateSolanaToken } from "../wallet/solana";
 
 type Asset = "native" | "USDC" | "USDT";
 const ASSETS: Asset[] = ["native", "USDC", "USDT"];
@@ -34,7 +35,7 @@ export function DonatePanel({ campaignId }: { campaignId: string }) {
   const publicClient = usePublicClient({ chainId: activeChainId });
 
   // Solana
-  const sol = useSolana();
+  const sol = useWallet();
 
   // shared tx state
   const [state, setState] = useState<"idle" | "approving" | "pending" | "done" | "err">("idle");
@@ -45,7 +46,7 @@ export function DonatePanel({ campaignId }: { campaignId: string }) {
   const solCampaign = solanaCampaign(campaignId);
   const escrow = escrowFor(campaignId, activeChainId);
   const target = evmChains[0];
-  const accepts = evmChains.map((c) => CHAIN_NAME[c] ?? `chain ${c}`).join(", ");
+  const accepts = [...evmChains.map((c) => CHAIN_NAME[c] ?? `chain ${c}`), ...(solCampaign ? ["Solana devnet"] : [])].join(", ");
 
   const onSolana = sol.connected;
   const nativeLabel = onSolana ? "SOL" : "ETH";
@@ -65,14 +66,14 @@ export function DonatePanel({ campaignId }: { campaignId: string }) {
     setErrMsg("");
     try {
       if (onSolana) {
-        if (!sol.address) return;
+        if (!sol.publicKey || !sol.sendTransaction) return;
         setState("pending");
         let sig: string;
         if (asset === "native") {
-          sig = await donateSolana(sol.address, campaignId, Math.round(parseFloat(amount || "0") * 1e9), anon);
+          sig = await donateSolana(sol.publicKey, sol.sendTransaction, campaignId, Math.round(parseFloat(amount || "0") * 1e9), anon);
         } else {
           const mint = SOLANA_TOKENS[asset];
-          sig = await donateSolanaToken(sol.address, campaignId, mint, Math.round(parseFloat(amount || "0") * 1e6), anon);
+          sig = await donateSolanaToken(sol.publicKey, sol.sendTransaction, campaignId, mint, Math.round(parseFloat(amount || "0") * 1e6), anon);
         }
         setTxUrl(`${SOLANA_EXPLORER_TX}${sig}?cluster=devnet`);
       } else {

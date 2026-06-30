@@ -19,7 +19,8 @@ import { Layout } from "./components/Layout";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { wagmiConfig } from "./wallet/wagmi";
-import { SolanaProvider } from "./wallet/solana";
+import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
+import { SOLANA_RPC } from "./contracts";
 import { XAuthProvider } from "./wallet/xauth";
 import "./styles.css";
 
@@ -29,7 +30,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <SolanaProvider>
+        <ConnectionProvider endpoint={SOLANA_RPC}>
+        <WalletProvider wallets={[]} autoConnect>
           <XAuthProvider>
           <BrowserRouter>
           <Routes>
@@ -49,7 +51,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             </Routes>
           </BrowserRouter>
           </XAuthProvider>
-        </SolanaProvider>
+        </WalletProvider>
+        </ConnectionProvider>
       </QueryClientProvider>
     </WagmiProvider>
   </React.StrictMode>

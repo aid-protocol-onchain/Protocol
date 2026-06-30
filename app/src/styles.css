@@ -374,3 +374,5 @@ button { font-family: inherit; cursor: pointer; }
 .wallet-name { font-size: 15px; font-weight: 600; display: flex; flex-direction: column; }
 .wallet-sub { font-size: 12px; font-weight: 400; color: var(--ink-soft); }
 .wallet-empty { font-size: 13px; color: var(--ink-soft); padding: 10px 4px; text-align: center; }
+
+.wallet-group-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; margin: 4px 2px 8px; }
