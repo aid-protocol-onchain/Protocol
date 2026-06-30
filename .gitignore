@@ -46,6 +46,8 @@ lcov.info
 !.claude/skills/bmad-agent-solana-program/
 !.claude/skills/bmad-agent-solana-client/
 !.claude/skills/bmad-agent-solana-auditor/
+!.claude/skills/bmad-agent-evm-auditor/
+!.claude/skills/solidity-auditor/
 _bmad/
 {output_folder}/
 
@@ -61,3 +63,10 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# HyperFrames + skills CLI install artifacts (the tracked skills live under .claude/skills/)
+.agents/
+skills-lock.json
+agent/
+# HyperFrames video working project (rendered output is hosted + committed under app/coming-soon/public/)
+videos/

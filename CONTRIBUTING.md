@@ -17,7 +17,7 @@ Smart contracts cannot afford failures, so contract changes must meet all of the
 - **Test coverage at least 95%, with 100% strongly preferred.** A pull request that drops contract coverage below 95% will not be merged.
   - EVM: `forge coverage` on `chain/evm` (lines and functions are held at 100%; branches at 95% or above).
   - Solana: the litesvm suite in `chain/solana/svm-tests` must pass, and new instructions need new tests.
-- **Static analysis clean:** Slither (EVM) and `cargo audit` (Solana) introduce no new findings beyond accepted informational notes.
+- **Agent-led security review.** Every contract change is reviewed by the project's auditor agents before merge: Solana through **Vera** (`bmad-agent-solana-auditor`, on the `solana-dev` security checklist) and EVM through **Mira** (`bmad-agent-evm-auditor`, driving Slither and Aderyn plus the `solidity-auditor` skill). The agent writes a dated report to `audit/`, and all Critical and High findings must be resolved. Clean Slither, Aderyn, and `cargo audit` runs are the automated floor, not the ceiling.
 - **No `unsafe`, no unchecked arithmetic** in contracts. Use checked math and follow checks-effects-interactions.
 
 Frontend and Worker changes should include sensible tests where practical and must build cleanly (`npm run build`).
@@ -70,7 +70,8 @@ This repo ships three custom BMad agents for Solana work, backed by the installe
 
 - **Sol** (`bmad-agent-solana-program`) builds and tests the on-chain programs in `chain/solana` (Anchor or Pinocchio).
 - **Kit** (`bmad-agent-solana-client`) builds the Solana client and wallet flows in `app/src/wallet` (@solana/kit, Codama, framework-kit).
-- **Vera** (`bmad-agent-solana-auditor`) runs adversarial security audits and writes reports to `audit/`.
+- **Vera** (`bmad-agent-solana-auditor`) runs adversarial Solana security audits and writes reports to `audit/`.
+- **Mira** (`bmad-agent-evm-auditor`) runs adversarial EVM/Solidity audits (Slither, Aderyn, the `solidity-auditor` skill) and writes reports to `audit/`.
 
 Use Sol for program changes and Kit for client changes. Before a contract change is merged, run a Vera audit and resolve all Critical and High findings; reports live in `audit/` (see [`audit/README.md`](audit/README.md)). An audit reports findings only; fixes land in separate, reviewed pull requests that reference the finding.
 

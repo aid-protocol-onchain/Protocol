@@ -42,7 +42,7 @@ Scale the ceremony to the change, but the default for anything non-trivial is: p
 | `docs/` | Project brief, ADRs (`docs/adr/`), design system, planning artifacts |
 | `packages/canonical/` | Shared canonical model types |
 | `audit/` | Security audit reports (the Vera agent writes here) |
-| `.claude/skills/` | Installed `solana-dev` skill + custom BMad agents Sol, Kit, Vera |
+| `.claude/skills/` | Installed `solana-dev` + `solidity-auditor` skills + custom BMad agents Sol, Kit, Vera (Solana), Mira (EVM auditor) |
 
 ## Build and test
 

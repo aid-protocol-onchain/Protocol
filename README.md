@@ -131,7 +131,8 @@ Solana work is driven by three custom BMad agents, backed by the installed [`sol
 
 - **Sol** (`bmad-agent-solana-program`): on-chain program development and tests in `chain/solana`.
 - **Kit** (`bmad-agent-solana-client`): Solana client and wallet flows in `app/src/wallet`.
-- **Vera** (`bmad-agent-solana-auditor`): adversarial security audits, written to `audit/`.
+- **Vera** (`bmad-agent-solana-auditor`): adversarial Solana security audits, written to `audit/`.
+- **Mira** (`bmad-agent-evm-auditor`): adversarial EVM/Solidity audits (Slither, Aderyn), written to `audit/`.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md#solana-development-with-bmad-agents) for how to use them.
 
