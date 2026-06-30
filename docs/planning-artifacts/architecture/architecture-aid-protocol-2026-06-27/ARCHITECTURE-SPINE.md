@@ -7,7 +7,7 @@ paradigm: 'Per-chain on-chain core + unified off-chain edge (ports & adapters ov
 scope: 'Multi-chain (Solana + EVM) disaster-relief funding platform — escrow money rail, donor identity/reputation, AI-verified proof-of-spend, all served from Cloudflare'
 status: final
 created: '2026-06-27'
-updated: '2026-06-27'
+updated: '2026-06-30'
 binds: [ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006]
 sources: ['docs/project-brief.md', 'docs/adr/ADR-001..006']
 companions: []
@@ -29,6 +29,8 @@ The same logical contract (escrow + proof-gated release + donor record) is **rep
 | **Canonical store** | One normalized schema for campaigns, donations, profiles, proofs | Cloudflare D1 |
 | **Client** | Donor/requester SPA; wallet connect (both chains) | `app/` (Vite + React on Cloudflare) |
 | **Content** | Blog/news landing (SEO) | `web/` (Astro on Cloudflare) |
+
+> **As-built note (2026-06-30):** the table above is the **target** decomposition. Today the off-chain edge runs as two Cloudflare Workers (AD-14): the **app** Worker (`app/` SPA + `app/worker/` canonical API, admin, news cron) and the **apex** Worker (`app/coming-soon/` growth and comms). The `edge/{adapters,workers}` split and the Astro `web/` surface remain target direction. Chain calls currently live in `app/src/wallet` and `app/src/contracts.ts`.
 
 ## Invariants & Rules
 
@@ -82,6 +84,26 @@ The same logical contract (escrow + proof-gated release + donor record) is **rep
 - **Binds:** `chain/**`, CI
 - **Prevents:** "works-on-my-machine" drift across the Anchor (Rust) and Foundry (Solidity) toolchains; non-reproducible contract builds/audits.
 - **Rule:** Both chains' contracts are built **and** tested inside **pinned Docker images** (one per chain toolchain). Host installs of `solana`/`anchor`/`foundry` are conveniences, not authoritative; **CI uses the same images**. A green build means green *in the container*.
+
+### AD-11: Off-chain person-identity via X OAuth, server-side only; identity is never a financial authority `[ADOPTED]`
+- **Binds:** all non-wallet identity (testers, requester public-identity link, donor Twitter aggregation)
+- **Prevents:** X tokens or secrets reaching the browser; conflating "signed in with X" with money authority; a second auth path that can move funds.
+- **Rule:** X (Twitter) OAuth 2.0 + PKCE runs entirely inside a Worker; the client secret and access tokens never reach the client; sessions are HttpOnly cookies backed by KV with short TTL. X is an attestation and contact signal only. Wallet-signature auth (not X) authorizes money writes, and AD-2 keeps on-chain authoritative. X does not return email; any email is user-supplied and validated separately (AD-13).
+
+### AD-12: Telegram is the community comms and notification channel, linked by one-time deep-link token, never a financial authority `[ADOPTED]`
+- **Binds:** tester, ambassador, and requester comms; 2FA; proof-of-spend reminders
+- **Prevents:** an unverified chat acting for someone; the bot becoming an auth or money path; webhook spoofing.
+- **Rule:** The bot webhook is verified by a secret-token header. A chat links to a verified identity only via a single-use, short-TTL deep-link token (`/start <token>`) minted inside that identity's authenticated session. 2FA codes are hashed, single-use, and TTL-bounded. Telegram is contact, notification, and step-up only; it never authorizes fund movement (AD-2 and AD-4 unchanged).
+
+### AD-13: Growth and trust surface sits off the money-critical path; eligibility uses public-identity signals; rewards never bypass escrow or proof `[ADOPTED]`
+- **Binds:** tester whitelist, ambassador program, eligibility scoring
+- **Prevents:** growth incentives becoming a backdoor around escrow or verification; sybil or bot testers; treating reward payouts as campaign funds.
+- **Rule:** Eligibility gates on public-identity signals (account age, real-follower floor, follow of the project account, non-disposable email) consistent with AD-5 tiers, validated via a public-data adapter (RapidAPI). Tester and ambassador rewards are capped, manual, paid out-of-band, and never relax AD-3, AD-4, or AD-7. Eligibility data lives in D1 as a rebuildable projection, never an authority over money.
+
+### AD-14: Two-Worker edge topology over shared D1 and KV; the projection rule holds across both `[ADOPTED]`
+- **Binds:** edge deployment, data ownership
+- **Prevents:** divergent data authorities between the two Workers; either Worker becoming a money authority; routing or role drift.
+- **Rule:** The edge runs as two Cloudflare Workers sharing one D1 and KV: the **app** Worker (product: SPA, canonical API, admin, news cron) and the **apex** Worker (growth and comms: coming-soon, tester whitelist, Telegram bot, 2FA). Both treat D1 as the rebuildable projection (AD-2); neither is the financial source of truth. Cross-Worker shared state goes through D1 and KV, never private Worker-to-Worker coupling. `run_worker_first` guards `/api/*` so the SPA asset-fallback never shadows API routes.
 
 ```mermaid
 graph TD
@@ -196,6 +218,10 @@ sequenceDiagram
 | Proof-of-spend + AI filtering | `edge/workers/ai` + Queues + R2 | AD-7 |
 | Donor/requester app | `app/` | AD-9 |
 | Blog/news landing | `web/` | AD-9 |
+| Person identity & sessions (X OAuth) | `app/worker` + `app/coming-soon` + KV | AD-11 |
+| Tester whitelist & ambassador growth | `app/coming-soon` + D1 | AD-13, AD-5 |
+| Community comms & 2FA (Telegram bot) | `app/coming-soon` + D1 | AD-12 |
+| News ingestion (ReliefWeb + Google News) | `app/worker` cron + D1 | AD-2 |
 
 ## Deferred
 
@@ -207,6 +233,9 @@ All v1 open questions/assumptions were resolved with the user (2026-06-27) and f
 - **Reputation graduation curve** (P3) — how proven good actors earn faster/larger unlocks; AD-3/AD-6 fix the invariants it builds on.
 - **Soulbound badge NFT mint** (P4) — gated on a proper artist; AD-6 already fixes it must be soulbound and PDA-derived.
 - **Token-registry curation workflow** — the ops process for adding SPL/ERC-20 tokens to the per-chain allowlist (AD-8).
+- **Edge decomposition** — splitting the current app Worker into the target `edge/{adapters,workers}` services (api, indexer, oracle, imagegen, ai) and standing up the Astro `web/` surface; AD-1, AD-2, and AD-14 fix the invariants that split must preserve.
+- **Chain indexer** — the Helius/Alchemy webhook to Queues to D1 projection (AD-2) is target; current campaign/donation data is served directly. No architecture change when built.
+- **Account-age eligibility source** — the RapidAPI `/user` endpoint did not reliably return `created_at`; the data source for the tester account-age gate (AD-13) is an open item to confirm or replace at build.
 
 ### Resolved (now in the ADs)
 | Question | Resolution |
