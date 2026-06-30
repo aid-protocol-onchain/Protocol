@@ -495,8 +495,11 @@ const HTML = `<!doctype html>
   <footer><div class="fin">
     <span>© 2026 Aid Protocol · Non-profit · Open source</span>
     <div class="sep">
+      <a href="https://github.com/aid-protocol-onchain/Protocol" target="_blank" rel="noreferrer">GitHub</a>
       <a href="https://x.com/aidprotocol_" target="_blank" rel="noreferrer">@aidprotocol_</a>
       <a href="mailto:admin@aidprotocol.org">admin@aidprotocol.org</a>
+      <a href="https://dev.aidprotocol.org/privacy" target="_blank" rel="noreferrer">Privacy</a>
+      <a href="https://dev.aidprotocol.org/terms" target="_blank" rel="noreferrer">Terms</a>
     </div>
   </div></footer>
 
