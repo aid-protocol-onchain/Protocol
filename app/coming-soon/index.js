@@ -226,7 +226,7 @@ const HTML = `<!doctype html>
   <div class="bg"><img id="hero" src="/hero-5.jpg" alt="" onload="this.classList.add('on')" /></div>
   <div class="wrap">
     <header>
-      <div class="mark"><img src="/favicon.svg" alt="" style="height:50px;width:50px;display:block" /><span class="wm">AID <span>PROTOCOL</span></span></div>
+      <div class="mark"><img src="/mark.svg" alt="" style="height:40px;width:auto;display:block" /><span class="wm">AID <span>PROTOCOL</span></span></div>
     </header>
     <section class="hero">
       <div class="eyebrow"><span class="dot"></span> Launching soon</div>

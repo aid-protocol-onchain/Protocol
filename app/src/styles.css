@@ -377,5 +377,5 @@ button { font-family: inherit; cursor: pointer; }
 
 .wallet-group-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; margin: 4px 2px 8px; }
 
-.brand-icon { height: 46px; width: 46px; display: block; margin-left: 16px; }
-@media (max-width: 640px) { .brand-icon { height: 38px; width: 38px; margin-left: 8px; } }
+.brand-icon { height: 34px; width: auto; display: block; margin-left: 16px; }
+@media (max-width: 640px) { .brand-icon { height: 28px; margin-left: 8px; } }
