@@ -21,23 +21,66 @@ function cookieVal(req, name) {
 }
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json" } });
 
-// Validate the X account via RapidAPI (twitter241). Returns whether it's a real,
-// active account and its follower count. If the key is missing or the call fails,
-// we allow the join (X OAuth already proved account ownership).
-async function checkTwitter(handle, key) {
-  if (!key) return { valid: true, followers: null };
+// --- Tester eligibility (AD-13): public-identity quality gate ---
+const MIN_FOLLOWERS = 25;
+const MIN_ACCOUNT_AGE_DAYS = 730; // about 2 years
+
+// Common disposable / temporary email domains (extend as needed).
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+  "mailinator.com", "guerrillamail.com", "guerrillamail.info", "10minutemail.com", "tempmail.com",
+  "temp-mail.org", "throwawaymail.com", "yopmail.com", "getnada.com", "trashmail.com", "sharklasers.com",
+  "grr.la", "maildrop.cc", "mailnesia.com", "dispostable.com", "fakeinbox.com", "tempinbox.com",
+  "mohmal.com", "mintemail.com", "emailondeck.com", "spamgourmet.com", "mytemp.email", "tempr.email",
+  "33mail.com", "mailcatch.com", "discard.email", "tmail.io", "moakt.com", "luxusmail.org",
+]);
+function isDisposableEmail(email) {
+  const dom = String(email).split("@")[1];
+  return !dom || DISPOSABLE_EMAIL_DOMAINS.has(dom.toLowerCase().trim());
+}
+
+// One RapidAPI /user call returns every signal we gate on.
+async function fetchXProfile(handle, key) {
+  if (!key) return { ok: false, error: "verification unavailable" };
   try {
     const r = await fetch(`https://twitter241.p.rapidapi.com/user?username=${encodeURIComponent(handle)}`, {
       headers: { "x-rapidapi-host": "twitter241.p.rapidapi.com", "x-rapidapi-key": key },
     });
     const j = await r.json();
     const u = j && j.result && j.result.data && j.result.data.user && j.result.data.user.result;
-    if (!u || u.__typename !== "User") return { valid: false, followers: null };
-    const f = u.legacy && u.legacy.followers_count;
-    return { valid: true, followers: typeof f === "number" ? f : null };
+    if (!u || u.__typename !== "User") return { ok: false, error: "X account not found or suspended" };
+    const leg = u.legacy || {};
+    const core = u.core || {};
+    const createdMs = core.created_at ? Date.parse(core.created_at) : NaN;
+    return {
+      ok: true,
+      restId: u.rest_id || null,
+      followers: typeof leg.followers_count === "number" ? leg.followers_count : null,
+      following: typeof leg.friends_count === "number" ? leg.friends_count : null,
+      statuses: leg.statuses_count || 0,
+      defaultImage: !!leg.default_profile_image,
+      hasBio: !!(leg.description && String(leg.description).trim()),
+      verified: !!u.is_blue_verified,
+      createdAt: core.created_at || null,
+      ageDays: isNaN(createdMs) ? null : Math.floor((Date.now() - createdMs) / 86400000),
+    };
   } catch {
-    return { valid: true, followers: null };
+    return { ok: false, error: "verification error" };
   }
+}
+
+// Evaluate the quality gate. Returns { pass, reason }.
+function evaluateTester(p) {
+  if (!p.ok) return { pass: false, reason: p.error };
+  if (typeof p.followers === "number" && p.followers < MIN_FOLLOWERS)
+    return { pass: false, reason: `Your X account needs at least ${MIN_FOLLOWERS} followers.` };
+  if (typeof p.ageDays === "number" && p.ageDays < MIN_ACCOUNT_AGE_DAYS)
+    return { pass: false, reason: "Your X account is too new (it should be about 2 years old)." };
+  if (p.defaultImage) return { pass: false, reason: "Add a profile photo to your X account first." };
+  if (!p.hasBio) return { pass: false, reason: "Add a bio to your X account first." };
+  if ((p.statuses || 0) < 1) return { pass: false, reason: "Your X account has no posts." };
+  if (typeof p.followers === "number" && typeof p.following === "number" && p.followers < 50 && p.following > p.followers * 20)
+    return { pass: false, reason: "Your follower-to-following ratio looks automated." };
+  return { pass: true, reason: null };
 }
 
 // --- Telegram bot helpers ---
@@ -157,17 +200,18 @@ export default {
         /* ignore */
       }
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: { message: "Enter a valid email" } }, 400);
+      if (isDisposableEmail(email)) return json({ error: { message: "Use a permanent email, not a temporary or disposable one." } }, 400);
       const existing = await env.DB.prepare("SELECT 1 FROM tester_whitelist WHERE x_id=?").bind(u.id).first();
       if (existing) return json({ ok: true, already: true });
       const cnt = (await env.DB.prepare("SELECT COUNT(*) AS c FROM tester_whitelist").first()).c || 0;
       if (cnt >= SPOTS) return json({ error: { message: "Whitelist is full" } }, 409);
-      const chk = await checkTwitter(u.handle, env.RAPIDAPI_KEY);
-      if (!chk.valid) return json({ error: { message: "We couldn't verify your X account. Make sure it's public and active." } }, 400);
-      const followers = chk.followers;
+      const prof = await fetchXProfile(u.handle, env.RAPIDAPI_KEY);
+      const gate = evaluateTester(prof);
+      if (!gate.pass) return json({ error: { message: gate.reason || "Your X account does not meet the tester requirements." } }, 400);
       await env.DB.prepare(
-        "INSERT INTO tester_whitelist (id, x_id, handle, email, name, avatar, followers, created_at) VALUES (?,?,?,?,?,?,?,?)"
+        "INSERT INTO tester_whitelist (id, x_id, handle, email, name, avatar, followers, following, account_created, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)"
       )
-        .bind("tw-" + crypto.randomUUID().slice(0, 8), u.id, u.handle, email, u.name || "", u.avatar || "", followers, new Date().toISOString())
+        .bind("tw-" + crypto.randomUUID().slice(0, 8), u.id, u.handle, email, u.name || "", u.avatar || "", prof.followers, prof.following, prof.createdAt, new Date().toISOString())
         .run();
       return json({ ok: true });
     }
