@@ -45,6 +45,25 @@ docker compose -f chain/docker/docker-compose.yml run --rm anchor \
 cd app && npm install && npm run build
 ```
 
+## Development method
+
+This project plans feature work with the **BMad Method** before building. Substantial features go brief or PRD, then architecture, then epics and stories, then implementation; small changes use a single story or quick-dev; trivial fixes can go straight to a commit. See [`AGENTS.md`](AGENTS.md#development-method-bmad) for the full workflow and which skills to use.
+
+## Commit messages
+
+We follow [Conventional Commits](https://www.conventionalcommits.org): `type(scope): summary`.
+
+- **Format:** imperative mood, lowercase, no trailing period. Keep the subject under about 72 characters; put detail and rationale in the body.
+- **Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`.
+- **Scope:** a short area, for example `wallet`, `auth`, `worker`, `solana`, `telegram`, `brand`, `contracts`.
+- One focused change per commit. If an AI agent helped author it, add a `Co-Authored-By:` trailer.
+
+Examples:
+
+    feat(telegram): add bot webhook and 2FA endpoints
+    fix(worker): run worker first for /api/* so OAuth redirect works
+    docs: document the Solana BMad agents
+
 ## Solana development with BMad agents
 
 This repo ships three custom BMad agents for Solana work, backed by the installed `solana-dev` skill (`.claude/skills/solana-dev`):

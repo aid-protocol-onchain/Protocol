@@ -13,6 +13,7 @@ activation_steps_append = []
 persistent_facts = [
   "file:{project-root}/.claude/skills/solana-dev/SKILL.md",
   "file:{project-root}/**/project-context.md",
+  "file:{project-root}/AGENTS.md",
   "Aid Protocol's Solana program lives in chain/solana.",
   "Write every audit report to {project-root}/audit/ named audit-solana-<topic>-<YYYY-MM-DD>.md; never include secrets.",
   "Aid Protocol content contains zero em dashes.",

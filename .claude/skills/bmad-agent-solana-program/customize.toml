@@ -13,6 +13,7 @@ activation_steps_append = []
 persistent_facts = [
   "file:{project-root}/.claude/skills/solana-dev/SKILL.md",
   "file:{project-root}/**/project-context.md",
+  "file:{project-root}/AGENTS.md",
   "Aid Protocol's Solana program lives in chain/solana; on-chain addresses are recorded in chain/deployments.json.",
   "Prefix CLI tools with NO_DNA=1 for non-interactive, structured output.",
   "Aid Protocol content contains zero em dashes.",

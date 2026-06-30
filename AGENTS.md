@@ -17,19 +17,32 @@ A non-profit, open-source platform for disaster relief. Donations are recorded o
 7. **EVM funds must stay isolated:** one `CampaignEscrow` per campaign via the factory. Do not commingle.
 8. **Separation of duties on release:** the approver key calls `recordProof`; a distinct authority key calls `release`. Never let one key do both.
 
+## Development method: BMad
+
+This project uses the **BMad Method** for feature work, current and future. Plan in BMad before you build. Planning artifacts live in `docs/planning-artifacts/` (project brief, architecture spine, epics); implementation artifacts live in the implementation-artifacts folder.
+
+- **Substantial features:** brief or PRD, then an architecture spine (`bmad-architecture`), then epics and stories (`bmad-create-epics-and-stories`, `bmad-create-story`), then implement with `bmad-dev-story`. Any contract, escrow, or release-flow change goes through this.
+- **Small, well-scoped changes:** a single story or `bmad-quick-dev` is enough.
+- **Trivial fixes** (copy, an obvious bug, docs): just make the change with a Conventional Commit. No ceremony required.
+- The BMad agents (Winston the architect, Mary the analyst, the Solana agents Sol, Kit, and Vera, and others) and skills live in `.claude/skills/`. Run `bmad-help` to route to the right one.
+
+Scale the ceremony to the change, but the default for anything non-trivial is: plan in BMad first, then build.
+
 ## Repository map
 
 | Path | What it is |
 | --- | --- |
 | `app/src/` | React SPA: `pages/`, `components/`, `wallet/` (wagmi), `contracts.ts` (on-chain addresses + ABIs), `legal.ts` |
 | `app/worker/index.ts` | The Worker: JSON API, admin/diligence endpoints, news ingestion, cron |
-| `app/db/` | D1 `schema.sql` plus incremental migrations `p2.sql`, `p3.sql`, `p4.sql` (apply in order) |
+| `app/db/` | D1 `schema.sql` plus incremental migrations `p2.sql` through `p6.sql` (apply in order) |
 | `app/coming-soon/` | Separate Worker serving the branded apex `aidprotocol.org` |
 | `chain/evm/` | Foundry: `src/AidEscrowFactory.sol`, `src/CampaignEscrow.sol`, `test/AidEscrow.t.sol` |
 | `chain/solana/` | Anchor: `programs/aid_escrow/src/lib.rs`, in-process tests in `svm-tests/tests/` |
 | `chain/deployments.json` | Deployed addresses per network (keep in sync with `app/src/contracts.ts`) |
 | `docs/` | Project brief, ADRs (`docs/adr/`), design system, planning artifacts |
 | `packages/canonical/` | Shared canonical model types |
+| `audit/` | Security audit reports (the Vera agent writes here) |
+| `.claude/skills/` | Installed `solana-dev` skill + custom BMad agents Sol, Kit, Vera |
 
 ## Build and test
 
@@ -46,7 +59,15 @@ docker compose -f chain/docker/docker-compose.yml run --rm anchor \
 cd app && npm install && npm run build && npx wrangler deploy
 ```
 
-Windows note: this repo is developed on Windows. Prefer PowerShell or `MSYS_NO_PATHCONV=1` for Docker volume mounts so paths are not mangled.
+This repo is OS-agnostic: all builds, tests, and deploys run in Docker (and Wrangler), so contributors can develop on macOS, Linux, or Windows. Do not assume a host OS.
+
+## Git and commit conventions
+
+- **Conventional Commits.** Format `type(scope): summary`, imperative mood, lowercase, no trailing period. Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`. Scope is a short area such as `wallet`, `auth`, `worker`, `solana`, `telegram`, `brand`, or `contracts`.
+- One focused change per commit. Keep the subject under about 72 characters and put the why in the body.
+- Add a `Co-Authored-By:` trailer when an AI agent helped author the change.
+- Commit and push only when the user asks. Never push without explicit approval, and never force-push shared branches.
+- Contributors fork and branch from `main`, then open a pull request (see [`CONTRIBUTING.md`](CONTRIBUTING.md)). Never commit secrets.
 
 ## Domain model (key concepts)
 

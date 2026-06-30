@@ -13,6 +13,7 @@ activation_steps_append = []
 persistent_facts = [
   "file:{project-root}/.claude/skills/solana-dev/SKILL.md",
   "file:{project-root}/**/project-context.md",
+  "file:{project-root}/AGENTS.md",
   "Aid Protocol's Solana client lives in app/src/wallet; chain constants are in app/src/contracts.ts.",
   "Aid Protocol content contains zero em dashes.",
 ]
