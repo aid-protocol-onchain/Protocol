@@ -24,6 +24,7 @@ const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, header
 // --- Tester eligibility (AD-13): public-identity quality gate ---
 const MIN_FOLLOWERS = 25;
 const MIN_ACCOUNT_AGE_DAYS = 730; // about 2 years
+const OUR_X_REST_ID = "2071141117664411648"; // @aidprotocol_
 
 // Common disposable / temporary email domains (extend as needed).
 const DISPOSABLE_EMAIL_DOMAINS = new Set([
@@ -81,6 +82,33 @@ function evaluateTester(p) {
   if (typeof p.followers === "number" && typeof p.following === "number" && p.followers < 50 && p.following > p.followers * 20)
     return { pass: false, reason: "Your follower-to-following ratio looks automated." };
   return { pass: true, reason: null };
+}
+
+// Does this user follow @aidprotocol_? Scans our (small) follower list.
+// Returns true / false / null (unknown, e.g. API error).
+async function followsUs(restId, handle, key) {
+  if (!key) return null;
+  const wantId = restId ? String(restId) : null;
+  const wantHandle = handle ? String(handle).toLowerCase() : null;
+  try {
+    let cursor = "";
+    for (let page = 0; page < 6; page++) {
+      const url = new URL("https://twitter241.p.rapidapi.com/followers");
+      url.searchParams.set("user", OUR_X_REST_ID);
+      url.searchParams.set("count", "100");
+      if (cursor) url.searchParams.set("cursor", cursor);
+      const r = await fetch(url, { headers: { "x-rapidapi-host": "twitter241.p.rapidapi.com", "x-rapidapi-key": key } });
+      const j = await r.json();
+      const txt = JSON.stringify(j && j.result ? j.result : j);
+      if (wantId && txt.includes(`"rest_id":"${wantId}"`)) return true;
+      if (wantHandle && txt.toLowerCase().includes(`"screen_name":"${wantHandle}"`)) return true;
+      cursor = j && j.cursor && j.cursor.bottom ? String(j.cursor.bottom) : "";
+      if (!cursor || cursor.startsWith("0|") || cursor === "0") break;
+    }
+    return false;
+  } catch {
+    return null;
+  }
 }
 
 // --- Telegram bot helpers ---
@@ -208,6 +236,9 @@ export default {
       const prof = await fetchXProfile(u.handle, env.RAPIDAPI_KEY);
       const gate = evaluateTester(prof);
       if (!gate.pass) return json({ error: { message: gate.reason || "Your X account does not meet the tester requirements." } }, 400);
+      const follows = await followsUs(prof.restId, u.handle, env.RAPIDAPI_KEY);
+      if (follows !== true)
+        return json({ error: { message: follows === false ? "Follow @aidprotocol_ on X first, then claim your spot." : "We could not verify your follow yet. Make sure you follow @aidprotocol_ and try again in a moment." } }, 400);
       await env.DB.prepare(
         "INSERT INTO tester_whitelist (id, x_id, handle, email, name, avatar, followers, following, account_created, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)"
       )
