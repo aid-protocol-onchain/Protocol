@@ -6,6 +6,7 @@
 .cloudflare.env
 .admin-token
 *.admin-token
+.mcp.json
 # deployer / signer keypairs (Solana + EVM)
 *-deployer*.json
 .devnet-deployer.json
