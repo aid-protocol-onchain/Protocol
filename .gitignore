@@ -38,7 +38,14 @@ chain/evm/cache/
 lcov.info
 
 # ───────────────────────── local tooling (not product) ─────────────────────────
-.claude/
+.claude/*
+!.claude/skills/
+.claude/skills/*
+# Tracked: the project's Solana skill + custom BMad agents (rest of .claude stays local)
+!.claude/skills/solana-dev/
+!.claude/skills/bmad-agent-solana-program/
+!.claude/skills/bmad-agent-solana-client/
+!.claude/skills/bmad-agent-solana-auditor/
 _bmad/
 {output_folder}/
 

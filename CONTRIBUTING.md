@@ -45,6 +45,16 @@ docker compose -f chain/docker/docker-compose.yml run --rm anchor \
 cd app && npm install && npm run build
 ```
 
+## Solana development with BMad agents
+
+This repo ships three custom BMad agents for Solana work, backed by the installed `solana-dev` skill (`.claude/skills/solana-dev`):
+
+- **Sol** (`bmad-agent-solana-program`) builds and tests the on-chain programs in `chain/solana` (Anchor or Pinocchio).
+- **Kit** (`bmad-agent-solana-client`) builds the Solana client and wallet flows in `app/src/wallet` (@solana/kit, Codama, framework-kit).
+- **Vera** (`bmad-agent-solana-auditor`) runs adversarial security audits and writes reports to `audit/`.
+
+Use Sol for program changes and Kit for client changes. Before a contract change is merged, run a Vera audit and resolve all Critical and High findings; reports live in `audit/` (see [`audit/README.md`](audit/README.md)). An audit reports findings only; fixes land in separate, reviewed pull requests that reference the finding.
+
 ## Code style
 
 - Match the surrounding code: naming, comment density, and idiom.

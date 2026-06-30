@@ -119,9 +119,21 @@ chain/
   deployments.json   Deployed addresses per network
 docs/                Project brief, ADRs, design system, planning artifacts
 packages/canonical/  Shared canonical model types
+audit/               Security audit reports (one Markdown file per audit)
+.claude/skills/      Installed solana-dev skill + custom BMad agents (Sol, Kit, Vera)
 ROADMAP.md           Where the project is going
 AGENTS.md            Orientation for AI agents and new contributors
 ```
+
+### Solana BMad agents
+
+Solana work is driven by three custom BMad agents, backed by the installed [`solana-dev`](.claude/skills/solana-dev) skill:
+
+- **Sol** (`bmad-agent-solana-program`): on-chain program development and tests in `chain/solana`.
+- **Kit** (`bmad-agent-solana-client`): Solana client and wallet flows in `app/src/wallet`.
+- **Vera** (`bmad-agent-solana-auditor`): adversarial security audits, written to `audit/`.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md#solana-development-with-bmad-agents) for how to use them.
 
 ## Getting started
 
