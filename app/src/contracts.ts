@@ -12,12 +12,10 @@ export function factoryFor(chainId: number): `0x${string}` | undefined {
 }
 
 // Per-campaign isolated escrows, keyed by D1 campaign id then EVM chain id.
-// NOTE: these were created by the pre-audit factory/program and must be
-// recreated on the redeployed hardened contracts before demoing on new code.
 export const CAMPAIGN_ESCROWS: Record<string, Partial<Record<number, `0x${string}`>>> = {
   "ve-quake-2026": {
-    [baseSepolia.id]: "0x27BdE55Cffdd3493E1437cfB9b8986D7C953c822",
-    [sepolia.id]: "0x27BdE55Cffdd3493E1437cfB9b8986D7C953c822",
+    [baseSepolia.id]: "0x6b3FD9883826031DfEa01926eB0c015bA9165805",
+    [sepolia.id]: "0xB02A8820F11dBA74545b5E3b8D27579b96A03331",
   },
 };
 
@@ -71,7 +69,7 @@ export interface SolanaCampaign {
 
 // Per-campaign Solana deployment, keyed by the D1 campaign id.
 export const SOLANA_CAMPAIGNS: Record<string, SolanaCampaign> = {
-  "ve-quake-2026": { id: 1, campaignPda: "6bdycQjj3TH9dHmebHwumaUUfhBwRzCYKSuUvZruzv5j" },
+  "ve-quake-2026": { id: 2, campaignPda: "2c4ugT3iEV9uoqmwNxoZ2GDNSPPHm9ZA9qpqtcquCHuY" },
 };
 
 // Whitelisted SPL mints on devnet (6 decimals).

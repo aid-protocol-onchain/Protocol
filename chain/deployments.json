@@ -21,21 +21,21 @@
     "devnet": {
       "programId": "AVayPFmfGivPALcE93L8gfULQwQ6GPoVGGpEu9VSRSVT",
       "authority": null,
-      "admin": null,
+      "admin": "Danjq1vBQHRRGJfa6wgx4KX4DtPhbzZH9nySw9Qd3B2m",
+      "approver": "S5TxbT4VqkVK33GaRnwWVn362FyyPLyyZbvNzAh5sLM",
       "explorer": "https://explorer.solana.com",
       "status": "upgraded",
       "deployTx": "5RTPvMZbgPQRW8ERVGrBvxDJngtf9m3R6PipXq5j911e8NLQbN3yxiw7qiiAEAJstNiR295XoGayMXP2x8261TYg",
       "upgradeTx": "H46q36W2xNbcoibDGjjLFDPnSLhQ67m1Cda58yvSL2f6mKuRmYq8r8MHMfycy3sahy3CqvanhWUKhNEp1UkLHfa",
       "upgradedTo": "hardened bytecode (audit remediation + set_admin)",
-      "note": "run initialize_config(admin) before register_token; recreate the demo campaign (old id 1 uses the pre-upgrade account layout)"
+      "note": "config initialized (admin above), USDC/USDT registered, demo campaign recreated at id 2"
     }
   },
   "campaigns": {
-    "_note": "created by the pre-audit contracts; recreate on the redeployed factory and upgraded program before demoing on the hardened code",
     "ve-quake-2026": {
-      "baseSepolia": "0x27BdE55Cffdd3493E1437cfB9b8986D7C953c822",
-      "sepolia": "0x27BdE55Cffdd3493E1437cfB9b8986D7C953c822",
-      "solanaDevnet": { "id": 1, "campaignPda": "6bdycQjj3TH9dHmebHwumaUUfhBwRzCYKSuUvZruzv5j" }
+      "baseSepolia": "0x6b3FD9883826031DfEa01926eB0c015bA9165805",
+      "sepolia": "0xB02A8820F11dBA74545b5E3b8D27579b96A03331",
+      "solanaDevnet": { "id": 2, "campaignPda": "2c4ugT3iEV9uoqmwNxoZ2GDNSPPHm9ZA9qpqtcquCHuY" }
     }
   },
   "tokens": {
