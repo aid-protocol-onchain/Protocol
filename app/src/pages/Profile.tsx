@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useTranslation, Trans } from "react-i18next";
 import type { DonorProfileData } from "../types";
 import { api, usd, badgeTier, chainPill } from "../lib";
 
 // Donor profile: /u/:handle (Twitter) or /w/:wallet (on-chain address).
 export function Profile({ kind }: { kind: "u" | "w" }) {
+  const { t } = useTranslation();
   const params = useParams();
   const id = kind === "u" ? params.handle : params.wallet;
   const [data, setData] = useState<DonorProfileData | null>(null);
@@ -23,24 +25,23 @@ export function Profile({ kind }: { kind: "u" | "w" }) {
   if (err) {
     return (
       <section className="hero" style={{ marginTop: 26 }}>
-        <div className="eyebrow">Donor profile</div>
-        <h1>No public record</h1>
+        <div className="eyebrow">{t("profile.eyebrowNoRecord")}</div>
+        <h1>{t("profile.noRecordTitle")}</h1>
         <p>
-          We couldn't find public donations for <strong>{kind === "u" ? `@${id}` : id}</strong>. They may have given
-          anonymously, or not yet given to a registered disaster.
+          <Trans i18nKey="profile.noRecordBody" values={{ who: kind === "u" ? `@${id}` : id }} components={{ strong: <strong /> }} />
         </p>
-        <Link className="btn" to="/leaderboard">See the leaderboard</Link>
+        <Link className="btn" to="/leaderboard">{t("profile.seeLeaderboard")}</Link>
       </section>
     );
   }
 
-  if (!data) return <div className="loading">Loading…</div>;
+  if (!data) return <div className="loading">{t("common.loading")}</div>;
 
   const tier = badgeTier(data.totalUsd);
   const assets: [string, number][] = [
     ["SOL", data.assets.sol],
     ["ETH", data.assets.eth],
-    ["Stable (USDC + USDT)", data.assets.stable],
+    [t("profile.assetStable"), data.assets.stable],
   ];
 
   return (
@@ -48,24 +49,24 @@ export function Profile({ kind }: { kind: "u" | "w" }) {
       <section className="profile-head">
         <div className="profile-av">{data.handle.replace("@", "").slice(0, 2).toUpperCase()}</div>
         <div>
-          <div className="eyebrow">{kind === "u" ? "Twitter donor" : "Wallet donor"}</div>
+          <div className="eyebrow">{kind === "u" ? t("profile.twitterDonor") : t("profile.walletDonor")}</div>
           <h1 style={{ margin: "4px 0 8px" }}>{data.handle}</h1>
-          <span className="pill" style={{ background: tier.bg, color: tier.fg }}>{tier.name} donor</span>
+          <span className="pill" style={{ background: tier.bg, color: tier.fg }}>{t("profile.tierDonor", { tier: tier.name })}</span>
         </div>
         <div className="profile-total">
           <div className="profile-total-num">{usd(data.totalUsd)}</div>
-          <div className="profile-total-lbl">given to date</div>
+          <div className="profile-total-lbl">{t("profile.givenToDate")}</div>
         </div>
       </section>
 
       <div className="stat-grid">
         <div className="stat">
           <div className="stat-num">{data.causes}</div>
-          <div className="stat-lbl">cause{data.causes === 1 ? "" : "s"} supported</div>
+          <div className="stat-lbl">{t("profile.causesSupported", { count: data.causes })}</div>
         </div>
         <div className="stat">
           <div className="stat-num">{data.gifts}</div>
-          <div className="stat-lbl">gift{data.gifts === 1 ? "" : "s"}</div>
+          <div className="stat-lbl">{t("profile.giftsLabel", { count: data.gifts })}</div>
         </div>
         <div className="stat">
           <div className="stat-chains">
@@ -74,11 +75,11 @@ export function Profile({ kind }: { kind: "u" | "w" }) {
               return cp ? <span key={ch} className={`pill ${cp.cls}`}>{cp.label}</span> : null;
             })}
           </div>
-          <div className="stat-lbl">chains used</div>
+          <div className="stat-lbl">{t("profile.chainsUsed")}</div>
         </div>
       </div>
 
-      <div className="section-head"><h2>By asset</h2></div>
+      <div className="section-head"><h2>{t("profile.byAsset")}</h2></div>
       <div className="panel">
         {assets.map(([label, value]) => (
           <div className="asset-row" key={label}>
@@ -94,7 +95,7 @@ export function Profile({ kind }: { kind: "u" | "w" }) {
         ))}
       </div>
 
-      <div className="section-head"><h2>Recent gifts</h2></div>
+      <div className="section-head"><h2>{t("profile.recentGifts")}</h2></div>
       <div className="panel" style={{ padding: 0 }}>
         {data.donations.map((d, i) => {
           const cp = chainPill[d.chain];

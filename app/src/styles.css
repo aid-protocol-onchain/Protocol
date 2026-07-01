@@ -59,6 +59,11 @@ button { font-family: inherit; cursor: pointer; }
 .nav-mid { display: flex; align-items: center; gap: 18px; white-space: nowrap; }
 .btn-wallet { white-space: nowrap; }
 .nav-burger { display: none; align-items: center; justify-content: center; width: 38px; height: 38px; border: 1px solid var(--line-strong); background: var(--card); border-radius: var(--radius); color: var(--ink); font-size: 20px; }
+.lang-switcher { display: inline-flex; align-items: center; border: 1px solid var(--line-strong); border-radius: var(--radius); overflow: hidden; flex-shrink: 0; }
+.lang-opt { padding: 6px 9px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--ink-soft); background: var(--card); border: 0; cursor: pointer; line-height: 1; }
+.lang-opt + .lang-opt { border-left: 1px solid var(--line-strong); }
+.lang-opt:hover { color: var(--ink); }
+.lang-opt.on { color: var(--brand); background: var(--brand-bg); }
 .mobile-menu { display: flex; flex-direction: column; gap: 4px; padding: 8px 20px 14px; }
 .mobile-menu .navlink { padding: 10px 8px; border-radius: var(--radius); font-size: 15px; }
 .mobile-menu .navlink:hover { background: var(--page); }

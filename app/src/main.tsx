@@ -12,10 +12,11 @@ import { News } from "./pages/News";
 import { Profile } from "./pages/Profile";
 import { Apply } from "./pages/Apply";
 import { Admin } from "./pages/Admin";
-import { Legal } from "./pages/Legal";
+import { LegalPage } from "./pages/Legal";
 import { Past } from "./pages/Past";
-import { PRIVACY, TERMS } from "./legal";
 import { Layout } from "./components/Layout";
+import { I18nextProvider } from "react-i18next";
+import i18n from "./i18n";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { wagmiConfig } from "./wallet/wagmi";
@@ -28,6 +29,7 @@ const queryClient = new QueryClient();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
+    <I18nextProvider i18n={i18n}>
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <ConnectionProvider endpoint={SOLANA_RPC}>
@@ -45,8 +47,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <Route path="/news" element={<News />} />
               <Route path="/apply" element={<Apply />} />
               <Route path="/admin" element={<Admin />} />
-              <Route path="/privacy" element={<Legal title="Privacy Policy" content={PRIVACY} />} />
-              <Route path="/terms" element={<Legal title="Terms of Service" content={TERMS} />} />
+              <Route path="/privacy" element={<LegalPage doc="privacy" />} />
+              <Route path="/terms" element={<LegalPage doc="terms" />} />
             </Route>
             </Routes>
           </BrowserRouter>
@@ -55,5 +57,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         </ConnectionProvider>
       </QueryClientProvider>
     </WagmiProvider>
+    </I18nextProvider>
   </React.StrictMode>
 );

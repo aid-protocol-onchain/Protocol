@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import type { RecentDonation } from "../types";
 import { chainPill } from "../lib";
 
 export function Ticker({ items }: { items: RecentDonation[] }) {
+  const { t } = useTranslation();
   if (!items.length) return null;
   // duplicate the list so the marquee loops seamlessly
   const loop = [...items, ...items];
@@ -10,7 +12,7 @@ export function Ticker({ items }: { items: RecentDonation[] }) {
   return (
     <div className="ticker">
       <div className="ticker-label">
-        <span className="ticker-dot" /> Live donations
+        <span className="ticker-dot" /> {t("ticker.liveDonations")}
       </div>
       <div className="ticker-viewport">
         <div className="ticker-track">
@@ -19,7 +21,7 @@ export function Ticker({ items }: { items: RecentDonation[] }) {
             return (
               <Link to={`/c/${d.campaign_id}`} className="ticker-item" key={`${d.id}-${i}`}>
                 <i className="ti ti-heart" aria-hidden="true" />
-                <span className="ticker-who">{d.is_anonymous ? "Anonymous" : d.donor_label}</span>
+                <span className="ticker-who">{d.is_anonymous ? t("ticker.anonymous") : d.donor_label}</span>
                 <span className="ticker-amt">{d.amount}</span>
                 <span className="ticker-arrow"><i className="ti ti-arrow-right" aria-hidden="true" /></span>
                 <span className="ticker-camp">{d.campaign_title}</span>

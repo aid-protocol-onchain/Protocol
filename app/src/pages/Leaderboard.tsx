@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation, Trans } from "react-i18next";
 import type { Campaign, LeaderEntry } from "../types";
 import { api, usd, badgeTier, chainPill } from "../lib";
 
 export function Leaderboard() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<LeaderEntry[] | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [cause, setCause] = useState("");
@@ -26,18 +28,18 @@ export function Leaderboard() {
   }, [cause, cat]);
 
   const cats: [string, string][] = [
-    ["", "All"],
-    ["sol", "Most SOL"],
-    ["eth", "Most ETH"],
-    ["stable", "Most stable"],
+    ["", t("leaderboard.catAll")],
+    ["sol", t("leaderboard.catMostSol")],
+    ["eth", t("leaderboard.catMostEth")],
+    ["stable", t("leaderboard.catMostStable")],
   ];
 
   return (
     <>
       <section className="hero" style={{ marginTop: 26 }}>
-        <div className="eyebrow">Donor leaderboard</div>
-        <h1>The people <span className="grad-text">keeping the lifeline open.</span></h1>
-        <p>Ranked by total given, normalized to USD across Solana and Ethereum. Anonymous gifts stay private and aren't listed.</p>
+        <div className="eyebrow">{t("leaderboard.eyebrow")}</div>
+        <h1><Trans i18nKey="leaderboard.heroHeading" components={{ grad: <span className="grad-text" /> }} /></h1>
+        <p>{t("leaderboard.lead")}</p>
       </section>
 
       <div className="lbcats">
@@ -49,15 +51,15 @@ export function Leaderboard() {
       </div>
 
       <div className="section-head">
-        <h2>{cat === "stable" ? "Most stable (USDC + USDT)" : cat === "sol" ? "Most SOL" : cat === "eth" ? "Most ETH" : "Top donors"}</h2>
+        <h2>{cat === "stable" ? t("leaderboard.headMostStable") : cat === "sol" ? t("leaderboard.headMostSol") : cat === "eth" ? t("leaderboard.headMostEth") : t("leaderboard.headTopDonors")}</h2>
         <select className="inp" style={{ width: "auto" }} value={cause} onChange={(e) => setCause(e.target.value)}>
-          <option value="">All causes</option>
+          <option value="">{t("leaderboard.allCauses")}</option>
           {campaigns.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
         </select>
       </div>
 
-      {err && <div className="loading">Couldn't load the leaderboard. {err}</div>}
-      {!rows && !err && <div className="loading">Loading…</div>}
+      {err && <div className="loading">{t("leaderboard.loadError", { error: err })}</div>}
+      {!rows && !err && <div className="loading">{t("common.loading")}</div>}
 
       {rows && (
         <div className="panel" style={{ padding: 0 }}>
@@ -70,7 +72,7 @@ export function Leaderboard() {
                 <div className="lb-who">
                   <div className="lb-name">{r.donor_label}</div>
                   <div className="lb-meta">
-                    {r.causes} cause{r.causes > 1 ? "s" : ""} · {r.gifts} gift{r.gifts > 1 ? "s" : ""}
+                    {t("common.causes", { count: r.causes })} · {t("common.gifts", { count: r.gifts })}
                     {(r.chains || "").split(",").map((ch) => {
                       const cp = chainPill[ch.trim()];
                       return cp ? <span key={ch} className={`pill ${cp.cls}`} style={{ marginLeft: 6, fontSize: 11 }}>{cp.label}</span> : null;

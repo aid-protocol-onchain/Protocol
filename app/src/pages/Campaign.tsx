@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import type { CampaignDetail } from "../types";
-import { api, usd, num, pct, chainPill } from "../lib";
+import { api, usd, num, pct, chainPill, formatDate } from "../lib";
 import { DonatePanel } from "../components/DonatePanel";
 
 export function Campaign() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const [data, setData] = useState<CampaignDetail | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -15,20 +17,20 @@ export function Campaign() {
       .catch((e) => setErr(String(e)));
   }, [id]);
 
-  if (err) return <div className="loading">Couldn't load this campaign. {err}</div>;
-  if (!data) return <div className="loading">Loading…</div>;
+  if (err) return <div className="loading">{t("campaign.loadError", { error: err })}</div>;
+  if (!data) return <div className="loading">{t("common.loading")}</div>;
 
   const { campaign: c, proofs, donations } = data;
 
   return (
     <>
       <p style={{ margin: "18px 0 0" }}>
-        <Link to="/" className="muted"><i className="ti ti-arrow-left" style={{ verticalAlign: -2 }} aria-hidden="true" /> All disasters</Link>
+        <Link to="/" className="muted"><i className="ti ti-arrow-left" style={{ verticalAlign: -2 }} aria-hidden="true" /> {t("campaign.allDisasters")}</Link>
       </p>
 
       <section className="hero" style={{ marginTop: 12 }}>
         <div className="eyebrow" style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <span className="pill pill-danger"><i className="ti ti-alert-triangle" aria-hidden="true" /> Active emergency</span>
+          <span className="pill pill-danger"><i className="ti ti-alert-triangle" aria-hidden="true" /> {t("campaign.activeEmergency")}</span>
           <span style={{ color: "#9fb0c4" }}><i className="ti ti-map-pin" aria-hidden="true" /> {c.location}</span>
         </div>
         <h1 style={{ fontSize: 26 }}>{c.title}</h1>
@@ -42,16 +44,16 @@ export function Campaign() {
               {c.requester_name}
               <i className="ti ti-rosette-discount-check" style={{ color: "var(--trust)" }} aria-hidden="true" />
             </div>
-            <div className="faint">Verified · tier {c.requester_tier} · {c.requester_handle}</div>
+            <div className="faint">{t("campaign.verifiedTier", { tier: c.requester_tier, handle: c.requester_handle })}</div>
           </div>
-          <span className="pill pill-trust">{c.first_release_pct}% first release</span>
+          <span className="pill pill-trust">{t("campaign.firstRelease", { pct: c.first_release_pct })}</span>
         </div>
       </div>
 
       <div className="metricrow">
-        <div className="metric"><div className="k">Raised</div><div className="v">{usd(c.raised_usd)}</div></div>
-        <div className="metric"><div className="k">Goal</div><div className="v">{usd(c.goal_usd)}</div></div>
-        <div className="metric"><div className="k">Donors</div><div className="v">{num(c.donor_count)}</div></div>
+        <div className="metric"><div className="k">{t("campaign.raised")}</div><div className="v">{usd(c.raised_usd)}</div></div>
+        <div className="metric"><div className="k">{t("campaign.goal")}</div><div className="v">{usd(c.goal_usd)}</div></div>
+        <div className="metric"><div className="k">{t("campaign.donors")}</div><div className="v">{num(c.donor_count)}</div></div>
       </div>
       <div className="bar"><span style={{ width: `${pct(c.raised_usd, c.goal_usd)}%` }} /></div>
 
@@ -59,7 +61,7 @@ export function Campaign() {
         <div>
           <div className="panel">
             <h2 style={{ fontSize: 17, margin: "0 0 6px" }}>
-              <i className="ti ti-photo-check" style={{ color: "var(--trust)", verticalAlign: -2 }} aria-hidden="true" /> Proof of spend
+              <i className="ti ti-photo-check" style={{ color: "var(--trust)", verticalAlign: -2 }} aria-hidden="true" /> {t("campaign.proofOfSpend")}
             </h2>
             {proofs.map((p) => (
               <div className="proof" key={p.id}>
@@ -68,22 +70,22 @@ export function Campaign() {
                   <h4>
                     {p.title}
                     {p.ai_verified ? (
-                      <span className="pill pill-trust"><i className="ti ti-shield-check" aria-hidden="true" /> AI-verified</span>
+                      <span className="pill pill-trust"><i className="ti ti-shield-check" aria-hidden="true" /> {t("campaign.aiVerified")}</span>
                     ) : null}
                   </h4>
-                  <div className="muted">Tranche {p.tranche} · {usd(p.spent_usd)} spent · {p.media_count} files</div>
-                  <div className="faint">{p.created_at}</div>
+                  <div className="muted">{t("campaign.trancheLine", { tranche: p.tranche, spent: usd(p.spent_usd), count: p.media_count })}</div>
+                  <div className="faint">{formatDate(p.created_at)}</div>
                 </div>
               </div>
             ))}
             <div className="faint" style={{ marginTop: 10, display: "flex", gap: 7, alignItems: "center" }}>
-              <i className="ti ti-clock" aria-hidden="true" /> Next tranche unlocks once new proof passes review
+              <i className="ti ti-clock" aria-hidden="true" /> {t("campaign.nextTranche")}
             </div>
           </div>
 
           <div className="panel">
             <h2 style={{ fontSize: 17, margin: "0 0 6px" }}>
-              <i className="ti ti-link" style={{ verticalAlign: -2 }} aria-hidden="true" /> On-chain donations
+              <i className="ti ti-link" style={{ verticalAlign: -2 }} aria-hidden="true" /> {t("campaign.onchainDonations")}
             </h2>
             {donations.map((d) => {
               const cp = chainPill[d.chain];
@@ -93,8 +95,8 @@ export function Campaign() {
                     {d.is_anonymous ? <i className="ti ti-eye-off" aria-hidden="true" /> : d.donor_label.replace("@", "").slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    {d.is_anonymous ? "Anonymous" : d.donor_label}
-                    {!d.is_anonymous && <span className="faint"> · public</span>}
+                    {d.is_anonymous ? t("campaign.anonymous") : d.donor_label}
+                    {!d.is_anonymous && <span className="faint"> · {t("campaign.public")}</span>}
                   </div>
                   <span className={`pill ${cp.cls}`} style={{ marginLeft: 8 }}>{cp.label}</span>
                   <span className="amt">{d.amount}</span>
