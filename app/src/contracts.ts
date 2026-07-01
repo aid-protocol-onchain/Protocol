@@ -1,10 +1,19 @@
 import { baseSepolia, sepolia } from "wagmi/chains";
 
-// On-chain deployment addresses (mirror of chain/deployments.json). The factory
-// is the same address on both EVM testnets (deterministic CREATE from nonce 0).
-export const FACTORY = "0xfBfeA1576980F5E9Fd562cB13621316F0abCC461" as const;
+// On-chain deployment addresses (mirror of chain/deployments.json). Factory
+// addresses differ per chain (CREATE from the deployer nonce on each chain).
+export const FACTORIES: Record<number, `0x${string}`> = {
+  [baseSepolia.id]: "0x22E9d2ba9580aC72BbDc4A85B4dAd454E5e1d843",
+  [sepolia.id]: "0x93f85a3C7DD94B4815c317b341982C82c47755fB",
+};
+
+export function factoryFor(chainId: number): `0x${string}` | undefined {
+  return FACTORIES[chainId];
+}
 
 // Per-campaign isolated escrows, keyed by D1 campaign id then EVM chain id.
+// NOTE: these were created by the pre-audit factory/program and must be
+// recreated on the redeployed hardened contracts before demoing on new code.
 export const CAMPAIGN_ESCROWS: Record<string, Partial<Record<number, `0x${string}`>>> = {
   "ve-quake-2026": {
     [baseSepolia.id]: "0x27BdE55Cffdd3493E1437cfB9b8986D7C953c822",

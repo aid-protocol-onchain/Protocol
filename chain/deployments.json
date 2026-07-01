@@ -2,27 +2,36 @@
   "evm": {
     "sepolia": {
       "chainId": 11155111,
-      "factory": "0xfBfeA1576980F5E9Fd562cB13621316F0abCC461",
+      "factory": "0x93f85a3C7DD94B4815c317b341982C82c47755fB",
       "authority": "0x2490c0BDD0D0f6074624828Bf7013335bf381239",
-      "explorer": "https://sepolia.etherscan.io"
+      "approver": "0x976D3aE371dED68776D78f5B6141Fbb127a48C5F",
+      "explorer": "https://sepolia.etherscan.io",
+      "note": "hardened factory (audit remediation + two-step Safe-compatible roles)"
     },
     "baseSepolia": {
       "chainId": 84532,
-      "factory": "0xfBfeA1576980F5E9Fd562cB13621316F0abCC461",
+      "factory": "0x22E9d2ba9580aC72BbDc4A85B4dAd454E5e1d843",
       "authority": "0x2490c0BDD0D0f6074624828Bf7013335bf381239",
-      "explorer": "https://sepolia.basescan.org"
+      "approver": "0x976D3aE371dED68776D78f5B6141Fbb127a48C5F",
+      "explorer": "https://sepolia.basescan.org",
+      "note": "hardened factory (audit remediation + two-step Safe-compatible roles)"
     }
   },
   "solana": {
     "devnet": {
       "programId": "AVayPFmfGivPALcE93L8gfULQwQ6GPoVGGpEu9VSRSVT",
       "authority": null,
+      "admin": null,
       "explorer": "https://explorer.solana.com",
-      "status": "deployed",
-      "deployTx": "5RTPvMZbgPQRW8ERVGrBvxDJngtf9m3R6PipXq5j911e8NLQbN3yxiw7qiiAEAJstNiR295XoGayMXP2x8261TYg"
+      "status": "upgraded",
+      "deployTx": "5RTPvMZbgPQRW8ERVGrBvxDJngtf9m3R6PipXq5j911e8NLQbN3yxiw7qiiAEAJstNiR295XoGayMXP2x8261TYg",
+      "upgradeTx": "H46q36W2xNbcoibDGjjLFDPnSLhQ67m1Cda58yvSL2f6mKuRmYq8r8MHMfycy3sahy3CqvanhWUKhNEp1UkLHfa",
+      "upgradedTo": "hardened bytecode (audit remediation + set_admin)",
+      "note": "run initialize_config(admin) before register_token; recreate the demo campaign (old id 1 uses the pre-upgrade account layout)"
     }
   },
   "campaigns": {
+    "_note": "created by the pre-audit contracts; recreate on the redeployed factory and upgraded program before demoing on the hardened code",
     "ve-quake-2026": {
       "baseSepolia": "0x27BdE55Cffdd3493E1437cfB9b8986D7C953c822",
       "sepolia": "0x27BdE55Cffdd3493E1437cfB9b8986D7C953c822",
