@@ -83,6 +83,14 @@ contract MockRevertOnTransfer {
 
 contract RejectEther {}
 
+/// @notice Force-sends its balance to a target via selfdestruct (bypasses the
+///         missing receive()), used to drive forced-ETH / over-release scenarios.
+contract ForceEth {
+    constructor(address payable target) payable {
+        selfdestruct(target);
+    }
+}
+
 contract AidTest is Test {
     AidEscrowFactory factory;
     CampaignEscrow esc;
@@ -97,20 +105,37 @@ contract AidTest is Test {
     bytes32 constant PH = keccak256("proof-bundle-0");
     address constant NATIVE = address(0);
 
+    event AuthorityTransferStarted(address indexed previous, address indexed pending);
     event AuthorityChanged(address indexed previous, address indexed next);
+    event ApproverTransferStarted(address indexed previous, address indexed pending);
     event ApproverChanged(address indexed previous, address indexed next);
     event TokenRegistered(address indexed token, bool stable);
     event CampaignCreated(bytes32 indexed id, address indexed escrow, address requester, uint8 tier);
 
     function setUp() public {
-        factory = new AidEscrowFactory(authority);
+        factory = new AidEscrowFactory(authority, approver);
         usdc = new MockERC20();
         vm.startPrank(authority);
         factory.registerToken(address(usdc), true);
-        factory.setApprover(approver);
         address a = factory.createCampaign(id, requester, 2);
         vm.stopPrank();
         esc = CampaignEscrow(a);
+    }
+
+    /// @dev complete a two-step authority transfer to `next`.
+    function _transferAuthority(address next) internal {
+        vm.prank(authority);
+        factory.setAuthority(next);
+        vm.prank(next);
+        factory.acceptAuthority();
+    }
+
+    /// @dev complete a two-step approver transfer to `next`.
+    function _transferApprover(address next) internal {
+        vm.prank(authority);
+        factory.setApprover(next);
+        vm.prank(next);
+        factory.acceptApprover();
     }
 
     function _fundNative(address who, uint256 amount) internal {
@@ -137,15 +162,21 @@ contract AidTest is Test {
 
     // ============ factory ============
 
-    function testFactoryDefaultsApproverToAuthority() public view {
-        // a fresh factory defaults approver to authority until set
+    function testFactoryRolesAreDistinct() public view {
+        // approver and authority are distinct by construction (CC-D)
         assertEq(factory.authority(), authority);
-        assertEq(factory.approver(), approver); // setUp changed it
+        assertEq(factory.approver(), approver);
     }
 
-    function testFreshFactoryApproverEqualsAuthority() public {
-        AidEscrowFactory f = new AidEscrowFactory(authority);
-        assertEq(f.approver(), authority);
+    function testFactoryRejectsEqualRoles() public {
+        // constructing with approver == authority reverts (CC-D / finding 5)
+        vm.expectRevert(AidEscrowFactory.RolesMustDiffer.selector);
+        new AidEscrowFactory(authority, authority);
+    }
+
+    function testFactoryZeroApproverReverts() public {
+        vm.expectRevert(AidEscrowFactory.ZeroAddress.selector);
+        new AidEscrowFactory(authority, address(0));
     }
 
     function testFactoryDeploysIsolatedEscrow() public view {
@@ -158,7 +189,7 @@ contract AidTest is Test {
 
     function testFactoryZeroAuthorityReverts() public {
         vm.expectRevert(AidEscrowFactory.ZeroAddress.selector);
-        new AidEscrowFactory(address(0));
+        new AidEscrowFactory(address(0), approver);
     }
 
     function testCreateDuplicateReverts() public {
@@ -207,13 +238,52 @@ contract AidTest is Test {
         factory.unregisterToken(address(usdc));
     }
 
-    function testSetAuthority() public {
+    // ---- two-step authority transfer (CC-E / finding 6) ----
+
+    function testTwoStepAuthorityTransfer() public {
         address next = makeAddr("next");
+        // propose: emits TransferStarted, does NOT change authority
         vm.expectEmit(true, true, false, false);
-        emit AuthorityChanged(authority, next);
+        emit AuthorityTransferStarted(authority, next);
         vm.prank(authority);
         factory.setAuthority(next);
+        assertEq(factory.authority(), authority); // unchanged on propose
+        assertEq(factory.pendingAuthority(), next);
+        // accept from the new key: now it moves
+        vm.expectEmit(true, true, false, false);
+        emit AuthorityChanged(authority, next);
+        vm.prank(next);
+        factory.acceptAuthority();
         assertEq(factory.authority(), next);
+        assertEq(factory.pendingAuthority(), address(0));
+    }
+
+    function testAcceptAuthorityOnlyPending() public {
+        address next = makeAddr("next");
+        vm.prank(authority);
+        factory.setAuthority(next);
+        vm.prank(donorA); // not the pending authority
+        vm.expectRevert(AidEscrowFactory.NotPending.selector);
+        factory.acceptAuthority();
+        assertEq(factory.authority(), authority);
+    }
+
+    function testBadPendingNeverBricksLiveAuthority() public {
+        // a mistyped pending address can be overwritten; the live role never moves
+        address bad = makeAddr("bad");
+        address good = makeAddr("good");
+        vm.prank(authority);
+        factory.setAuthority(bad);
+        vm.prank(authority);
+        factory.setAuthority(good); // overwrite the typo
+        // bad can no longer accept
+        vm.prank(bad);
+        vm.expectRevert(AidEscrowFactory.NotPending.selector);
+        factory.acceptAuthority();
+        // good takes the role; the live authority was never bricked
+        vm.prank(good);
+        factory.acceptAuthority();
+        assertEq(factory.authority(), good);
     }
 
     function testSetAuthorityZeroReverts() public {
@@ -228,13 +298,41 @@ contract AidTest is Test {
         factory.setAuthority(donorA);
     }
 
-    function testSetApprover() public {
+    function testTwoStepRejectsRoleCollapseAuthority() public {
+        // proposing the current approver as the new authority must fail at accept
+        vm.prank(authority);
+        factory.setAuthority(approver);
+        vm.prank(approver);
+        vm.expectRevert(AidEscrowFactory.RolesMustDiffer.selector);
+        factory.acceptAuthority();
+        assertEq(factory.authority(), authority);
+    }
+
+    // ---- two-step approver transfer (CC-E / finding 6) ----
+
+    function testTwoStepApproverTransfer() public {
         address next = makeAddr("nextApprover");
         vm.expectEmit(true, true, false, false);
-        emit ApproverChanged(approver, next);
+        emit ApproverTransferStarted(approver, next);
         vm.prank(authority);
         factory.setApprover(next);
+        assertEq(factory.approver(), approver); // unchanged on propose
+        assertEq(factory.pendingApprover(), next);
+        vm.expectEmit(true, true, false, false);
+        emit ApproverChanged(approver, next);
+        vm.prank(next);
+        factory.acceptApprover();
         assertEq(factory.approver(), next);
+        assertEq(factory.pendingApprover(), address(0));
+    }
+
+    function testAcceptApproverOnlyPending() public {
+        address next = makeAddr("nextApprover");
+        vm.prank(authority);
+        factory.setApprover(next);
+        vm.prank(donorA);
+        vm.expectRevert(AidEscrowFactory.NotPending.selector);
+        factory.acceptApprover();
     }
 
     function testSetApproverZeroReverts() public {
@@ -249,14 +347,31 @@ contract AidTest is Test {
         factory.setApprover(donorA);
     }
 
+    function testTwoStepRejectsRoleCollapseApprover() public {
+        // proposing the current authority as the new approver must fail at accept
+        vm.prank(authority);
+        factory.setApprover(authority);
+        vm.prank(authority);
+        vm.expectRevert(AidEscrowFactory.RolesMustDiffer.selector);
+        factory.acceptApprover();
+        assertEq(factory.approver(), approver);
+    }
+
+    function testUnregisterTokenZeroReverts() public {
+        vm.prank(authority);
+        vm.expectRevert(AidEscrowFactory.ZeroAddress.selector);
+        factory.unregisterToken(address(0));
+    }
+
     // ============ separation of duties ============
 
     function testApproverRecordsAuthorityCannot() public {
+        _fundNative(donorA, 10 ether);
         _approveNative(0, 1 ether); // approver succeeds (in helper)
         assertEq(esc.proofHash(0), PH);
         vm.prank(authority);
         vm.expectRevert(CampaignEscrow.NotApprover.selector);
-        esc.recordProof(0, PH, NATIVE, 1 ether);
+        esc.recordProof(1, PH, NATIVE, 1 ether);
     }
 
     function testRecordProofDonorCannot() public {
@@ -603,5 +718,263 @@ contract AidTest is Test {
         vm.prank(donorA);
         vm.expectRevert(CampaignEscrow.TransferFailed.selector);
         esc.refundToken(address(bad));
+    }
+
+    // ============ finding 1 / CC-A: release bounded by raised ============
+
+    function testReleaseNativeCannotExceedRaised() public {
+        _fundNative(donorA, 4 ether); // raised 4
+        // approve up to raised across one tranche
+        _approveNative(0, 4 ether);
+        // release the full raised amount succeeds
+        vm.startPrank(authority);
+        esc.releaseNative(0, 4 ether, recipient);
+        assertEq(esc.releasedNative(), 4 ether);
+        vm.stopPrank();
+        // a further proof cannot even be approved beyond raised (record-time ceiling)
+        vm.prank(approver);
+        vm.expectRevert(CampaignEscrow.ExceedsRaised.selector);
+        esc.recordProof(1, PH, NATIVE, 1);
+    }
+
+    function testReleaseNativeExceedsRaisedReverts() public {
+        // Defense-in-depth: even if the approved ceiling were somehow corrupted
+        // above raised, the release-time funds-on-hand cap (CC-A) still bites. We
+        // corrupt approved[0][NATIVE] directly to simulate a broken/legacy ceiling.
+        _fundNative(donorA, 4 ether); // raised 4
+        _approveNative(0, 4 ether); // legitimate approved == raised
+        // approved mapping: slot 10, key tranche=0 then asset=NATIVE
+        bytes32 inner = keccak256(abi.encode(uint256(0), uint256(10)));
+        bytes32 slot = keccak256(abi.encode(uint256(uint160(NATIVE)), inner));
+        vm.store(address(esc), slot, bytes32(uint256(100 ether))); // headroom now huge
+        assertEq(esc.approved(0, NATIVE), 100 ether);
+        vm.startPrank(authority);
+        esc.releaseNative(0, 4 ether, recipient); // releases up to raised
+        // approved headroom remains (96 ether), but releasedNative 4 == raised 4,
+        // so the next wei is capped by the funds-on-hand bound, not the ceiling.
+        vm.expectRevert(CampaignEscrow.ExceedsRaised.selector);
+        esc.releaseNative(0, 1, recipient);
+        vm.stopPrank();
+    }
+
+    function testReleaseTokenCannotExceedRaised() public {
+        _fundToken(donorA, 1000e6); // raised 1000
+        _approveToken(address(usdc), 0, 1000e6);
+        vm.startPrank(authority);
+        esc.releaseToken(address(usdc), 0, 1000e6, recipient);
+        assertEq(esc.releasedToken(address(usdc)), 1000e6);
+        vm.stopPrank();
+        // cannot approve beyond raised on a fresh tranche
+        vm.prank(approver);
+        vm.expectRevert(CampaignEscrow.ExceedsRaised.selector);
+        esc.recordProof(1, PH, address(usdc), 1);
+    }
+
+    function testRecordProofTotalApprovedCannotExceedRaised() public {
+        _fundNative(donorA, 10 ether); // raised 10
+        _approveNative(0, 6 ether); // total approved 6 <= 10 OK
+        // second tranche pushes cumulative approved past raised
+        vm.prank(approver);
+        vm.expectRevert(CampaignEscrow.ExceedsRaised.selector);
+        esc.recordProof(1, PH, NATIVE, 5 ether); // 6 + 5 = 11 > 10
+    }
+
+    function testRecordProofTokenTotalApprovedCannotExceedRaised() public {
+        _fundToken(donorA, 1000e6);
+        _approveToken(address(usdc), 0, 600e6);
+        vm.prank(approver);
+        vm.expectRevert(CampaignEscrow.ExceedsRaised.selector);
+        esc.recordProof(1, PH, address(usdc), 500e6); // 600 + 500 > 1000
+    }
+
+    function testOverReleaseDoesNotBrickRefunds() public {
+        // after releasing the maximum (== raised), refunds still compute (return 0)
+        _fundNative(donorA, 4 ether);
+        _approveNative(0, 4 ether);
+        vm.prank(authority);
+        esc.releaseNative(0, 4 ether, recipient);
+        vm.prank(authority);
+        esc.enableRefunds();
+        // remaining is 0; donor is owed nothing but the call does not panic-revert
+        vm.prank(donorA);
+        vm.expectRevert(CampaignEscrow.NothingToRefund.selector);
+        esc.refundNative();
+    }
+
+    // ============ finding 9 / CC-A: forced ETH does not enable over-release =====
+
+    function testForcedEthDoesNotEnableOverRelease() public {
+        _fundNative(donorA, 4 ether); // raised 4
+        // force 10 ether of un-raised ETH into the escrow
+        new ForceEth{value: 10 ether}(payable(address(esc)));
+        assertEq(address(esc).balance, 14 ether);
+        // approver (faulty) cannot approve beyond raised (record-time ceiling)
+        vm.prank(approver);
+        vm.expectRevert(CampaignEscrow.ExceedsRaised.selector);
+        esc.recordProof(0, PH, NATIVE, 5 ether);
+        // Even if the ceiling were corrupted huge, native release is capped at
+        // raised regardless of the inflated 14 ether raw balance (forced ETH).
+        _approveNative(0, 4 ether);
+        bytes32 inner = keccak256(abi.encode(uint256(0), uint256(10)));
+        bytes32 slot = keccak256(abi.encode(uint256(uint160(NATIVE)), inner));
+        vm.store(address(esc), slot, bytes32(uint256(100 ether)));
+        vm.startPrank(authority);
+        esc.releaseNative(0, 4 ether, recipient); // up to raised only
+        vm.expectRevert(CampaignEscrow.ExceedsRaised.selector);
+        esc.releaseNative(0, 1, recipient); // forced ETH does not lift the cap
+        vm.stopPrank();
+        assertEq(esc.releasedNative(), 4 ether);
+    }
+
+    // ============ finding 2 / CC-B: saturating refund math ============
+
+    function testRefundableSaturatesWhenOverReleased() public {
+        // drive releasedNative > raisedNative by manipulating the storage counter,
+        // proving _refundable saturates instead of underflow-reverting.
+        _fundNative(donorA, 10 ether);
+        // Corrupt the releasedNative counter above raisedNative to prove the
+        // saturating math (CC-B) cannot underflow-revert. Storage layout (immutables
+        // are not in storage): slot 0 packs frozen+refunding, slot 1 raisedNative,
+        // slot 2 releasedNative (confirmed via `forge inspect storage-layout`).
+        vm.store(address(esc), bytes32(uint256(2)), bytes32(uint256(11 ether)));
+        assertEq(esc.releasedNative(), 11 ether);
+        assertGt(esc.releasedNative(), esc.raisedNative());
+        vm.prank(authority);
+        esc.enableRefunds();
+        // _refundable returns 0 (saturated) -> NothingToRefund, NOT an arithmetic panic
+        vm.prank(donorA);
+        vm.expectRevert(CampaignEscrow.NothingToRefund.selector);
+        esc.refundNative();
+    }
+
+    function testProRataUnchangedNormalCase() public {
+        // regression: the normal released <= raised pro-rata math is unchanged
+        _fundNative(donorA, 10 ether);
+        _fundNative(donorB, 10 ether); // raised 20
+        _approveNative(0, 8 ether);
+        vm.prank(authority);
+        esc.releaseNative(0, 8 ether, recipient); // remaining 12
+        vm.prank(authority);
+        esc.enableRefunds();
+        uint256 a0 = donorA.balance;
+        vm.prank(donorA);
+        esc.refundNative();
+        assertEq(donorA.balance - a0, 6 ether); // 10 * 12/20
+    }
+
+    // ============ finding 3 / CC-C: write-once monotonic proof ============
+
+    function testRecordProofIsWriteOnce() public {
+        _fundNative(donorA, 10 ether);
+        _approveNative(0, 4 ether);
+        vm.prank(approver);
+        vm.expectRevert(CampaignEscrow.AlreadyApproved.selector);
+        esc.recordProof(0, PH, NATIVE, 1 ether); // same (tranche, asset) re-record
+    }
+
+    function testCannotReopenCeilingAfterRelease() public {
+        // the finding-3 exploit: release the full approved, then try to reopen it
+        _fundNative(donorA, 10 ether);
+        _approveNative(0, 4 ether);
+        vm.prank(authority);
+        esc.releaseNative(0, 4 ether, recipient);
+        // re-recording the same tranche to reopen headroom must revert
+        vm.prank(approver);
+        vm.expectRevert(CampaignEscrow.AlreadyApproved.selector);
+        esc.recordProof(0, keccak256("new"), NATIVE, 4 ether);
+    }
+
+    function testRecordProofRejectsZeroAmount() public {
+        _fundNative(donorA, 10 ether);
+        vm.prank(approver);
+        vm.expectRevert(CampaignEscrow.ZeroAmount.selector);
+        esc.recordProof(0, PH, NATIVE, 0);
+    }
+
+    function testTrancheIndexMustBeMonotonic() public {
+        _fundNative(donorA, 10 ether);
+        // tranche 0 is the only valid next index; a far-future tranche reverts
+        vm.prank(approver);
+        vm.expectRevert(CampaignEscrow.BadTranche.selector);
+        esc.recordProof(5, PH, NATIVE, 1 ether);
+    }
+
+    function testTrancheCounterAdvancesSequentially() public {
+        _fundNative(donorA, 10 ether);
+        _approveNative(0, 2 ether);
+        assertEq(esc.nextTrancheNative(), 1);
+        _approveNative(1, 2 ether); // next valid index
+        assertEq(esc.nextTrancheNative(), 2);
+        // tranche 1 again is write-once
+        vm.prank(approver);
+        vm.expectRevert(CampaignEscrow.AlreadyApproved.selector);
+        esc.recordProof(1, PH, NATIVE, 1 ether);
+    }
+
+    function testTokenTrancheIndexMustBeMonotonic() public {
+        _fundToken(donorA, 1000e6);
+        vm.prank(approver);
+        vm.expectRevert(CampaignEscrow.BadTranche.selector);
+        esc.recordProof(5, PH, address(usdc), 100e6);
+    }
+
+    function testReleaseTokenExceedsRaisedReverts() public {
+        // defense-in-depth: a corrupted token approved ceiling is still capped at
+        // raisedToken by the release-time funds-on-hand bound (CC-A).
+        _fundToken(donorA, 1000e6);
+        _approveToken(address(usdc), 0, 1000e6);
+        // approved mapping slot 10: key tranche=0 then asset=usdc
+        bytes32 inner = keccak256(abi.encode(uint256(0), uint256(10)));
+        bytes32 slot = keccak256(abi.encode(uint256(uint160(address(usdc))), inner));
+        vm.store(address(esc), slot, bytes32(uint256(5000e6)));
+        vm.startPrank(authority);
+        esc.releaseToken(address(usdc), 0, 1000e6, recipient); // up to raised
+        vm.expectRevert(CampaignEscrow.ExceedsRaised.selector);
+        esc.releaseToken(address(usdc), 0, 1, recipient);
+        vm.stopPrank();
+    }
+
+    function testTokenTrancheMonotonicIndependentOfNative() public {
+        _fundNative(donorA, 10 ether);
+        _fundToken(donorA, 1000e6);
+        _approveNative(0, 2 ether); // advances native counter only
+        // token tranche 0 is still valid (per-asset counter)
+        _approveToken(address(usdc), 0, 100e6);
+        assertEq(esc.nextTrancheToken(address(usdc)), 1);
+    }
+
+    // ============ finding 7: self-/escrow-directed release rejected ============
+
+    function testReleaseTokenRejectsSelfTransfer() public {
+        _fundToken(donorA, 1000e6);
+        _approveToken(address(usdc), 0, 400e6);
+        vm.prank(authority);
+        vm.expectRevert(CampaignEscrow.InvalidRecipient.selector);
+        esc.releaseToken(address(usdc), 0, 100e6, address(esc));
+        // counters did not advance
+        assertEq(esc.releasedToken(address(usdc)), 0);
+        assertEq(esc.releasedForTranche(0, address(usdc)), 0);
+    }
+
+    function testRefundNativeTransferFailed() public {
+        // a donor contract that rejects ETH makes its own refund send fail
+        RejectEther badDonor = new RejectEther();
+        vm.deal(address(badDonor), 5 ether);
+        vm.prank(address(badDonor));
+        esc.donateNative{value: 5 ether}(false);
+        vm.prank(authority);
+        esc.enableRefunds();
+        vm.prank(address(badDonor));
+        vm.expectRevert(CampaignEscrow.TransferFailed.selector);
+        esc.refundNative();
+    }
+
+    function testReleaseNativeRejectsSelfTransfer() public {
+        _fundNative(donorA, 10 ether);
+        _approveNative(0, 4 ether);
+        vm.prank(authority);
+        vm.expectRevert(CampaignEscrow.InvalidRecipient.selector);
+        esc.releaseNative(0, 1 ether, payable(address(esc)));
+        assertEq(esc.releasedNative(), 0);
     }
 }

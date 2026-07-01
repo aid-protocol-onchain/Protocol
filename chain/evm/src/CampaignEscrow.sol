@@ -43,6 +43,16 @@ contract CampaignEscrow {
     mapping(uint256 => mapping(address => uint256)) public approved; // tranche => asset => approved amount
     mapping(uint256 => mapping(address => uint256)) public releasedForTranche; // tranche => asset => released
 
+    // Cumulative approved per asset, capped at raised so the ceiling can never
+    // exceed funds actually raised (CC-A). asset == address(0) means native ETH.
+    uint256 public totalApprovedNative;
+    mapping(address => uint256) public totalApprovedToken;
+
+    // Monotonic per-asset next-tranche counter: tranche indices must be sequential
+    // (tranche <= nextTranche), not sprayable across the key space (CC-C).
+    uint256 public nextTrancheNative;
+    mapping(address => uint256) public nextTrancheToken;
+
     address internal constant NATIVE = address(0);
 
     event DonationNative(address indexed donor, uint256 amount, bool isAnonymous);
@@ -62,6 +72,11 @@ contract CampaignEscrow {
     error NothingToRefund();
     error NotApproved();
     error ExceedsApproved();
+    error ExceedsRaised();
+    error AlreadyApproved();
+    error BadTranche();
+    error ZeroAmount();
+    error InvalidRecipient();
     error TransferFailed();
     error ZeroAddress();
     error TokenNotAllowed();
@@ -92,6 +107,10 @@ contract CampaignEscrow {
         emit DonationNative(msg.sender, msg.value, isAnonymous);
     }
 
+    /// @dev `raisedToken` is credited from the `amount` argument, not a measured
+    ///      balance delta. The factory allowlist must therefore admit only
+    ///      standard, non-fee-on-transfer ERC-20s (USDC/USDT); a fee-on-transfer
+    ///      or rebasing token would desync the books from custody.
     function donateToken(address token, uint256 amount, bool isAnonymous) external {
         if (frozen) revert FrozenCampaign();
         if (!IAidFactory(factory).isAllowed(token)) revert TokenNotAllowed();
@@ -105,10 +124,35 @@ contract CampaignEscrow {
 
     /// @notice Approver commits a proof hash and the amount approved for a tranche+asset.
     ///         Approved amounts are fixed here and never scale with later donations.
+    /// @dev    `hash` is an OFF-CHAIN attestation only. The on-chain release gate
+    ///         (`_checkRelease`) verifies presence (`proofHash[tranche] != 0`), not
+    ///         the content, and the hash is not bound to `amount`, `asset`, or the
+    ///         release `to`. Each `(tranche, asset)` proof is write-once (revert if
+    ///         already approved), `amount == 0` is rejected, the tranche index must
+    ///         be sequential against a per-asset monotonic counter, and the
+    ///         cumulative approved per asset can never exceed funds raised.
     function recordProof(uint256 tranche, bytes32 hash, address asset, uint256 amount) external onlyApprover {
         if (hash == bytes32(0)) revert NotApproved();
+        if (amount == 0) revert ZeroAmount();
+        // Write-once per (tranche, asset): the ceiling can never be reopened.
+        if (approved[tranche][asset] != 0) revert AlreadyApproved();
+
+        if (asset == NATIVE) {
+            if (tranche > nextTrancheNative) revert BadTranche();
+            uint256 newTotal = totalApprovedNative + amount;
+            if (newTotal > raisedNative) revert ExceedsRaised();
+            totalApprovedNative = newTotal;
+            if (tranche == nextTrancheNative) nextTrancheNative = tranche + 1;
+        } else {
+            if (tranche > nextTrancheToken[asset]) revert BadTranche();
+            uint256 newTotal = totalApprovedToken[asset] + amount;
+            if (newTotal > raisedToken[asset]) revert ExceedsRaised();
+            totalApprovedToken[asset] = newTotal;
+            if (tranche == nextTrancheToken[asset]) nextTrancheToken[asset] = tranche + 1;
+        }
+
         proofHash[tranche] = hash;
-        approved[tranche][asset] += amount;
+        approved[tranche][asset] = amount;
         emit ProofRecorded(tranche, hash, asset, amount);
     }
 
@@ -116,8 +160,12 @@ contract CampaignEscrow {
 
     function releaseNative(uint256 tranche, uint256 amount, address payable to) external onlyAuthority {
         if (to == address(0)) revert ZeroAddress();
+        if (to == address(this)) revert InvalidRecipient();
         if (frozen) revert FrozenCampaign();
         _checkRelease(tranche, NATIVE, amount);
+        // Funds-on-hand ceiling (CC-A): release can never exceed donor funds,
+        // regardless of approved headroom or any forced ETH in the raw balance.
+        if (releasedNative + amount > raisedNative) revert ExceedsRaised();
         releasedForTranche[tranche][NATIVE] += amount;
         releasedNative += amount;
         emit ReleasedNative(tranche, to, amount);
@@ -127,8 +175,11 @@ contract CampaignEscrow {
 
     function releaseToken(address token, uint256 tranche, uint256 amount, address to) external onlyAuthority {
         if (to == address(0)) revert ZeroAddress();
+        if (to == address(this)) revert InvalidRecipient();
         if (frozen) revert FrozenCampaign();
         _checkRelease(tranche, token, amount);
+        // Funds-on-hand ceiling (CC-A): release can never exceed donor funds.
+        if (releasedToken[token] + amount > raisedToken[token]) revert ExceedsRaised();
         releasedForTranche[tranche][token] += amount;
         releasedToken[token] += amount;
         emit ReleasedToken(token, tranche, to, amount);
@@ -173,14 +224,24 @@ contract CampaignEscrow {
 
     // ---- internals ----
 
+    /// @dev The proof gate is a PRESENCE check (`proofHash[tranche] != 0`), not a
+    ///      content verification; `hash` is an off-chain attestation (see
+    ///      `recordProof`). Release stays bounded by the per-tranche `approved`
+    ///      ceiling here; the `released <= raised` funds-on-hand bound is enforced
+    ///      separately in the release functions (CC-A).
     function _checkRelease(uint256 tranche, address asset, uint256 amount) internal view {
         if (proofHash[tranche] == bytes32(0)) revert NotApproved();
         if (releasedForTranche[tranche][asset] + amount > approved[tranche][asset]) revert ExceedsApproved();
     }
 
+    /// @dev Saturating subtraction (CC-B): if `released > raised` for an asset (a
+    ///      corrupted counter, or forced ETH), `remaining` is 0 rather than an
+    ///      underflow revert, so a single corrupted counter can never brick every
+    ///      donor's refund. For the normal `released <= raised` path the pro-rata
+    ///      share is byte-for-byte unchanged (AD-4 preserved).
     function _refundable(uint256 contributed, uint256 raised, uint256 released) internal pure returns (uint256) {
         if (raised == 0) return 0;
-        uint256 remaining = raised - released;
+        uint256 remaining = released >= raised ? 0 : raised - released;
         return (contributed * remaining) / raised;
     }
 
