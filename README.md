@@ -145,6 +145,9 @@ Smart contracts build and test **only in Docker** (pinned toolchains), so you do
 docker run --rm -v "$PWD/chain:/work" -w /work/evm --entrypoint sh \
   ghcr.io/foundry-rs/foundry:stable -c "forge test && forge coverage"
 
+# EVM: static-analysis gate (Slither + Aderyn, Docker-only)
+sh chain/docker/analyze-evm.sh
+
 # Solana: build + in-process litesvm tests
 docker compose -f chain/docker/docker-compose.yml run --rm anchor \
   "anchor build && cd /work/chain/solana/svm-tests && cargo test"
@@ -166,7 +169,7 @@ The app expects a Cloudflare account with a D1 database, KV namespace, and R2 bu
 Smart contracts cannot afford failures, so the bar is strict and enforced in review:
 
 - **Contract coverage: 95% minimum, 100% preferred.** A change that drops contract coverage below 95% will not be merged.
-- EVM runs `forge coverage` and Slither. Solana runs the litesvm suite and `cargo audit`. No new findings.
+- EVM runs `forge coverage` plus the Docker static-analysis gate `sh chain/docker/analyze-evm.sh` (Slither + Aderyn); the gate passes when there are no unresolved High or Critical findings. Solana runs the litesvm suite and `cargo audit`. No new findings.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full quality bar.
 

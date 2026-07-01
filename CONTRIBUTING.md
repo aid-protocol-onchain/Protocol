@@ -37,6 +37,9 @@ Frontend and Worker changes should include sensible tests where practical and mu
 docker run --rm -v "$PWD/chain:/work" -w /work/evm --entrypoint sh \
   ghcr.io/foundry-rs/foundry:stable -c "forge test && forge coverage"
 
+# EVM static-analysis gate (Slither + Aderyn, Docker-only)
+sh chain/docker/analyze-evm.sh
+
 # Solana build + litesvm tests
 docker compose -f chain/docker/docker-compose.yml run --rm anchor \
   "anchor build && cd /work/chain/solana/svm-tests && cargo test"
@@ -74,6 +77,14 @@ This repo ships three custom BMad agents for Solana work, backed by the installe
 - **Mira** (`bmad-agent-evm-auditor`) runs adversarial EVM/Solidity audits (Slither, Aderyn, the `solidity-auditor` skill) and writes reports to `audit/`.
 
 Use Sol for program changes and Kit for client changes. Before a contract change is merged, run a Vera audit and resolve all Critical and High findings; reports live in `audit/` (see [`audit/README.md`](audit/README.md)). An audit reports findings only; fixes land in separate, reviewed pull requests that reference the finding.
+
+For EVM contract changes, also run the automated static-analysis gate (Slither + Aderyn) in Docker and require no unresolved High or Critical findings:
+
+```bash
+sh chain/docker/analyze-evm.sh
+```
+
+It writes `slither-report.json` and `aderyn-report.md` to the repo root; the triaged verdict is written to `audit/static-analysis-evm-2026-06-30.md`. This gate is the automated floor on top of the manual Mira audit, not a replacement for it.
 
 ## Code style
 

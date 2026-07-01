@@ -70,3 +70,9 @@ skills-lock.json
 agent/
 # HyperFrames video working project (rendered output is hosted + committed under app/coming-soon/public/)
 videos/
+
+# raw static-analysis tool outputs (triaged report lives in audit/)
+slither-report.json
+aderyn-report.md
+report.md
+*slither-stderr*
